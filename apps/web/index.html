@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AgentSafe Casper</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">A</span>
+          <div>
+            <strong>AgentSafe</strong>
+            <span>Casper</span>
+          </div>
+        </div>
+        <nav>
+          <a class="active" href="#">Dashboard</a>
+          <a href="#">Policies</a>
+          <a href="#">Services</a>
+          <a href="#">Receipts</a>
+        </nav>
+      </aside>
+
+      <main>
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Casper Agentic Buildathon</p>
+            <h1>Let AI agents spend safely on Casper.</h1>
+          </div>
+          <div class="wallet">
+            <span class="dot"></span>
+            casper-test-wallet
+          </div>
+        </header>
+
+        <section class="grid">
+          <article class="panel hero-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Active agent</p>
+                <h2 id="agent-name">RWA Buyer Agent</h2>
+              </div>
+              <span class="status success">Active</span>
+            </div>
+            <div class="metrics">
+              <div>
+                <span>Per-action cap</span>
+                <strong id="cap">$25</strong>
+              </div>
+              <div>
+                <span>Daily budget</span>
+                <strong id="budget">$50</strong>
+              </div>
+              <div>
+                <span>Spent today</span>
+                <strong id="spent">$0</strong>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="run-allowed">Buy one RWA report</button>
+              <button id="run-blocked" class="secondary">Attempt overspend</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Policy</p>
+                <h2>Firewall rules</h2>
+              </div>
+            </div>
+            <ul class="rules" id="rules"></ul>
+          </article>
+
+          <article class="panel wide">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Agent activity</p>
+                <h2>Proof timeline</h2>
+              </div>
+              <span id="last-reason" class="status neutral">Waiting</span>
+            </div>
+            <div id="timeline" class="timeline"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">MCP service</p>
+                <h2>RWA Risk Report</h2>
+              </div>
+            </div>
+            <div class="service">
+              <span>Service ID</span>
+              <code>svc-rwa-risk</code>
+              <span>Endpoint hash</span>
+              <code>hash-endpoint-rwa-risk</code>
+              <span>Price</span>
+              <code>$10 demo credit</code>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
