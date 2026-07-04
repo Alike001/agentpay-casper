@@ -14,7 +14,8 @@
     "proof:readiness": "node scripts/proof-readiness.js",
     "proof:demo": "node scripts/write-demo-proof.js",
     "contracts:test": "cargo test --manifest-path contracts/agent-safe-core/Cargo.toml",
-    "green-light": "npm run lint && npm run typecheck && npm test && npm run contracts:test && npm run build && npm run proof:readiness"
+    "contracts:odra:test": "cd contracts/agent-safe-odra && cargo test",
+    "green-light": "npm run lint && npm run typecheck && npm test && npm run contracts:test && npm run contracts:odra:test && npm run build && npm run proof:readiness"
   },
   "engines": {
     "node": ">=24"

@@ -21,17 +21,18 @@ This checks:
 - optional `wasm32-unknown-unknown` target.
 - proof template files.
 
-Current expected missing optional items on this machine:
-
-- `cargo-odra`
-- `wasm32-unknown-unknown`
-
 Odra docs list the required setup as:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 cargo install cargo-odra --locked
 ```
+
+Current local status:
+
+- `wasm32-unknown-unknown` is installed.
+- `cargo-odra` is installed.
+- `contracts/agent-safe-odra` contains a tested Odra `ReceiptLedger` module.
 
 ## Local Demo Proof
 
@@ -62,9 +63,9 @@ For submission, fill `proof/testnet-proof.template.json` or create `proof/testne
 Use Odra for smart contracts if setup completes quickly.
 
 1. Install Odra prerequisites.
-2. Convert `contracts/agent-safe-core` from logic scaffold into Odra modules.
-3. Run Odra tests.
-4. Deploy to Casper Testnet.
+2. Extend `contracts/agent-safe-odra` beyond `ReceiptLedger` if time allows.
+3. Run Odra tests with `npm run contracts:odra:test`.
+4. Build/deploy to Casper Testnet.
 5. Record hashes in `proof/testnet-proof.json`.
 
 ### Fallback: Transaction-Producing Testnet Component
@@ -86,4 +87,3 @@ Do not paste screenshots alone. Every proof row needs:
 - explorer/CSPR.cloud URL
 - date/time
 - what action it proves
-

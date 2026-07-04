@@ -18,6 +18,7 @@ AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026
 - MCP-compatible JSON-RPC endpoint with policy and receipt tools.
 - Deterministic policy engine with reason codes.
 - Rust contract-logic scaffold and tests for agent, policy, service, and receipt state.
+- Odra `ReceiptLedger` contract module with passing Odra test.
 - Proof readiness and local demo proof scripts.
 
 ## Casper Integration Plan
@@ -33,6 +34,12 @@ The current code is ready to connect to Casper Testnet, but it does not yet clai
 | Agent registration tx | TBD |
 | Policy set tx | TBD |
 | Receipt write tx | TBD |
+
+Odra readiness:
+
+```bash
+npm run contracts:odra:test
+```
 
 ## Quickstart
 

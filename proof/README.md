@@ -5,6 +5,7 @@ This folder stores evidence for the DoraHacks/CSPR.fans submission.
 Current status:
 
 - `demo-proof.json` can be generated locally with `npm run proof:demo`.
+- `contracts/agent-safe-odra` contains a tested Odra `ReceiptLedger` module.
 - Real Casper Testnet contract addresses and transaction hashes are not filled yet.
 - Replace demo hashes with real explorer/CSPR.cloud links after Testnet deployment.
 
