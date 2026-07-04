@@ -18,8 +18,9 @@ impl DeployScript for AgentSafeDeployScript {
         env: &HostEnv,
         container: &mut DeployedContractsContainer
     ) -> Result<(), odra_cli::deploy::Error> {
+        env.set_gas(500_000_000_000u64);
         let ledger = ReceiptLedger::deploy(env, NoArgs);
-        container.add_contract("receipt_ledger", ledger)?;
+        container.add_contract(&ledger)?;
         Ok(())
     }
 }

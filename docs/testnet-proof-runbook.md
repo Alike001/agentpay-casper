@@ -33,6 +33,16 @@ Current local status:
 - `wasm32-unknown-unknown` is installed.
 - `cargo-odra` is installed.
 - `contracts/agent-safe-odra` contains a tested Odra `ReceiptLedger` module.
+- The CLI deployment account is funded on Casper Testnet.
+- First deploy attempt reached Testnet but failed because the unoptimized WASM used unsupported bulk-memory operations.
+- `wasm-opt` is required to produce Casper-compatible optimized WASM.
+
+Install Binaryen locally:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y binaryen
+```
 
 ## Local Demo Proof
 

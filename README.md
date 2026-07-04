@@ -41,6 +41,13 @@ Odra readiness:
 npm run contracts:odra:test
 ```
 
+Current Testnet deployment status:
+
+- CLI account is funded.
+- First Testnet deployment attempt produced transaction `4b041358bf524df0bd5931eee628981235711ac0585e47842a396665fa3ae648`.
+- That attempt failed because the unoptimized WASM used unsupported bulk-memory operations.
+- Install Binaryen/`wasm-opt`, rebuild with `cargo odra build`, then redeploy.
+
 ## Quickstart
 
 ```bash
