@@ -1,0 +1,6 @@
+last_updated = "2026-07-04T22:31:44Z"
+
+[[contracts]]
+name = "ReceiptLedger"
+package_name = "ReceiptLedger"
+package_hash = "hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833"

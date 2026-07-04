@@ -6,16 +6,17 @@ Current status:
 
 - `demo-proof.json` can be generated locally with `npm run proof:demo`.
 - `contracts/agent-safe-odra` contains a tested Odra `ReceiptLedger` module.
-- Real Casper Testnet contract addresses and transaction hashes are not filled yet.
-- Replace demo hashes with real explorer/CSPR.cloud links after Testnet deployment.
+- `testnet-proof.json` contains the deployed Casper Testnet `ReceiptLedger` package hash and receipt-write transaction.
+- Explorer links are included for the deploy and write transactions.
 
-Required final evidence:
+Current qualification evidence:
+
+- ReceiptLedger contract/package hash.
+- Receipt write transaction.
+- State readback for receipt count, latest receipt ID, latest agent ID, and latest amount.
+
+Final-round roadmap evidence:
 
 - AgentRegistry contract/package hash.
 - PolicyVault contract/package hash.
 - ServiceRegistry contract/package hash.
-- ReceiptLedger contract/package hash.
-- Agent registration transaction.
-- Policy set transaction.
-- Service registration transaction.
-- Receipt write transaction.

@@ -32,21 +32,38 @@ Diagnosis:
 - The unoptimized WASM contains `memory.copy` bulk-memory instructions.
 - Casper Testnet rejected that WASM feature set.
 
-Next fix:
+Fix applied:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y binaryen
+rustup toolchain install nightly-2025-02-17
+rustup target add wasm32-unknown-unknown --toolchain nightly-2025-02-17
+cargo +nightly-2025-02-17 build --target wasm32-unknown-unknown --bin agent_safe_odra_build_contract --release
+cp target/wasm32-unknown-unknown/release/agent_safe_odra_build_contract.wasm wasm/ReceiptLedger.wasm
+wasm-opt --signext-lowering -Oz wasm/ReceiptLedger.wasm -o wasm/ReceiptLedger.wasm
+wasm-strip wasm/ReceiptLedger.wasm
 ```
 
-Then rebuild:
+Successful deploy:
+
+- Contract: `ReceiptLedger`
+- Package hash: `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833`
+- Deploy transaction hash: `cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411`
+- Explorer: https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411
+
+Receipt write:
+
+- Entry point: `write_receipt`
+- Agent ID: `agentsafe-demo-agent`
+- Service ID: `rwa-risk-report-api`
+- Amount: `12500000000`
+- Transaction hash: `3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86`
+- Explorer: https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86
+
+State readback:
 
 ```bash
-cd /home/ali/Desktop/casper-agent-commerce-firewall/contracts/agent-safe-odra
-cargo odra build
+receipt_count: 1
+last_receipt_id: receipt-latest
+last_agent_id: agentsafe-demo-agent
+last_amount: 12500000000
 ```
-
-Expected result:
-
-- `cargo odra build` should run `wasm-opt` and produce Casper-compatible optimized WASM.
-- Retry deploy after optimized WASM exists.

@@ -1,11 +1,18 @@
 # Casper Testnet Proof Runbook
 
-Status: ready for deployment credentials/tooling  
+Status: deployed proof available  
 Purpose: produce the evidence required by the qualification round.
 
-## Current Gap
+## Current Proof
 
-The prototype has deterministic policy logic, MCP-compatible tools, dashboard proof surfaces, and a Rust contract-logic scaffold. It does **not** yet have real Casper Testnet contract addresses or transaction hashes.
+The prototype has deterministic policy logic, MCP-compatible tools, dashboard proof surfaces, and a deployed Odra `ReceiptLedger` contract on Casper Testnet.
+
+Successful proof:
+
+- ReceiptLedger package hash: `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833`
+- Deploy transaction: https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411
+- Receipt write transaction: https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86
+- State readback: receipt count `1`, last receipt ID `receipt-latest`, last agent ID `agentsafe-demo-agent`, last amount `12500000000`.
 
 ## Readiness Command
 
@@ -34,10 +41,10 @@ Current local status:
 - `cargo-odra` is installed.
 - `contracts/agent-safe-odra` contains a tested Odra `ReceiptLedger` module.
 - The CLI deployment account is funded on Casper Testnet.
-- First deploy attempt reached Testnet but failed because the unoptimized WASM used unsupported bulk-memory operations.
-- `wasm-opt` is required to produce Casper-compatible optimized WASM.
+- The first deploy attempt reached Testnet but failed because the WASM used unsupported bulk-memory operations.
+- The successful deploy used `nightly-2025-02-17` to build WASM without bulk-memory, then `wasm-opt --signext-lowering` and `wasm-strip`.
 
-Install Binaryen locally:
+Install Binaryen locally if needed:
 
 ```bash
 sudo apt-get update
@@ -50,21 +57,18 @@ sudo apt-get install -y binaryen
 npm run proof:demo
 ```
 
-This writes `proof/demo-proof.json`, which demonstrates the local allow/block/receipt behavior. It is not sufficient for DoraHacks by itself. It is a placeholder until Testnet proof is created.
+This writes `proof/demo-proof.json`, which demonstrates the local allow/block/receipt behavior. The public Testnet evidence is stored in `proof/testnet-proof.json`.
 
 ## Testnet Proof Requirements
 
-For submission, fill `proof/testnet-proof.template.json` or create `proof/testnet-proof.json` with:
+For submission, `proof/testnet-proof.json` contains:
 
-- AgentRegistry package/contract hash.
-- PolicyVault package/contract hash.
-- ServiceRegistry package/contract hash.
 - ReceiptLedger package/contract hash.
-- Agent registration deploy/transaction hash.
-- Policy set deploy/transaction hash.
-- Service registration deploy/transaction hash.
 - Receipt write deploy/transaction hash.
 - Explorer or CSPR.cloud URLs.
+- State readback values.
+
+AgentRegistry, PolicyVault, and ServiceRegistry are final-round roadmap contracts.
 
 ## Deployment Options
 
@@ -72,11 +76,13 @@ For submission, fill `proof/testnet-proof.template.json` or create `proof/testne
 
 Use Odra for smart contracts if setup completes quickly.
 
-1. Install Odra prerequisites.
-2. Extend `contracts/agent-safe-odra` beyond `ReceiptLedger` if time allows.
+1. Install Odra prerequisites and Binaryen.
+2. Build with `nightly-2025-02-17` to avoid Casper-unsupported bulk-memory operations.
 3. Run Odra tests with `npm run contracts:odra:test`.
-4. Build/deploy to Casper Testnet.
-5. Record hashes in `proof/testnet-proof.json`.
+4. Copy the built WASM to `contracts/agent-safe-odra/wasm/ReceiptLedger.wasm`.
+5. Run `wasm-opt --signext-lowering -Oz` and `wasm-strip`.
+6. Deploy to Casper Testnet.
+7. Record hashes in `proof/testnet-proof.json`.
 
 ### Fallback: Transaction-Producing Testnet Component
 

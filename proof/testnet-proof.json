@@ -1,0 +1,43 @@
+{
+  "network": "casper-test",
+  "status": "deployed",
+  "generatedAt": "2026-07-04T22:31:44Z",
+  "account": {
+    "publicKey": "018340478632514f55a9961133bd8c7bd1c2c17babd79cc55c54058ffa5a02a4c5",
+    "accountHash": "account-hash-1faa97913d2aab536a286e90c7ed9eac494d7350513a337f76eb5fa0c1d755d1"
+  },
+  "contracts": {
+    "receiptLedger": {
+      "packageHash": "hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833",
+      "packageName": "contract-package-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833",
+      "deployHash": "cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411",
+      "explorerUrl": "https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411"
+    }
+  },
+  "transactions": {
+    "receiptWritten": {
+      "hash": "3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86",
+      "explorerUrl": "https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86",
+      "entryPoint": "write_receipt",
+      "result": "receipt-latest"
+    }
+  },
+  "stateProof": {
+    "receiptCount": "1",
+    "lastReceiptId": "receipt-latest",
+    "lastAgentId": "agentsafe-demo-agent",
+    "lastAmount": "12500000000"
+  },
+  "demoAction": {
+    "agentId": "agentsafe-demo-agent",
+    "serviceId": "rwa-risk-report-api",
+    "actionHash": "action_rwa_invoice_001",
+    "resultHash": "result_policy_approved_receipt_001",
+    "policyHash": "policy_daily_cap_rwa_allowlist",
+    "amount": "12500000000"
+  },
+  "notes": [
+    "ReceiptLedger is the transaction-producing Casper Testnet component for the qualification prototype.",
+    "AgentRegistry, PolicyVault, and ServiceRegistry remain documented roadmap contracts for the final-round build."
+  ]
+}

@@ -9,7 +9,7 @@ AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026
 - Local app: `npm run dev`, then open `http://localhost:4173`
 - Live app: TBD
 - Demo video: TBD
-- Casper Testnet proof: TBD
+- Casper Testnet proof: deployed ReceiptLedger + receipt transaction
 
 ## What Works Now
 
@@ -18,22 +18,21 @@ AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026
 - MCP-compatible JSON-RPC endpoint with policy and receipt tools.
 - Deterministic policy engine with reason codes.
 - Rust contract-logic scaffold and tests for agent, policy, service, and receipt state.
-- Odra `ReceiptLedger` contract module with passing Odra test.
+- Odra `ReceiptLedger` contract module with passing Odra test and Casper Testnet deployment.
 - Proof readiness and local demo proof scripts.
 
-## Casper Integration Plan
+## Casper Testnet Proof
 
-The current code is ready to connect to Casper Testnet, but it does not yet claim deployed contracts or real transaction hashes. The next build step is replacing the in-memory receipt writer with deployed Casper/Odra contracts and filling the proof table below.
+The qualification prototype has a transaction-producing Casper Testnet component. `ReceiptLedger` records the approved agent action receipt for the RWA risk report demo.
 
 | Evidence | Link |
 |---|---|
-| AgentRegistry contract | TBD |
-| PolicyVault contract | TBD |
-| ServiceRegistry contract | TBD |
-| ReceiptLedger contract | TBD |
-| Agent registration tx | TBD |
-| Policy set tx | TBD |
-| Receipt write tx | TBD |
+| ReceiptLedger package | `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833` |
+| ReceiptLedger deploy tx | https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411 |
+| Receipt write tx | https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86 |
+| Receipt count | `1` |
+| Last receipt ID | `receipt-latest` |
+| Last agent ID | `agentsafe-demo-agent` |
 
 Odra readiness:
 
@@ -43,10 +42,10 @@ npm run contracts:odra:test
 
 Current Testnet deployment status:
 
-- CLI account is funded.
-- First Testnet deployment attempt produced transaction `4b041358bf524df0bd5931eee628981235711ac0585e47842a396665fa3ae648`.
-- That attempt failed because the unoptimized WASM used unsupported bulk-memory operations.
-- Install Binaryen/`wasm-opt`, rebuild with `cargo odra build`, then redeploy.
+- CLI account is funded and deployed to `casper-test`.
+- A first deploy attempt failed because Casper rejected bulk-memory WASM.
+- The successful deploy used `nightly-2025-02-17` to build WASM without bulk-memory instructions, then `wasm-opt --signext-lowering` and `wasm-strip`.
+- Public proof is stored in `proof/testnet-proof.json`.
 
 ## Quickstart
 
@@ -63,7 +62,7 @@ npm run proof:readiness
 npm run proof:demo
 ```
 
-`proof/demo-proof.json` is local-only evidence. Real Casper Testnet hashes must be written to `proof/testnet-proof.json` before final submission.
+`proof/demo-proof.json` is local-only evidence. `proof/testnet-proof.json` contains the real Casper Testnet deployment and receipt transaction proof.
 
 ## API
 
@@ -95,7 +94,7 @@ Example MCP-style request:
 ## Security and Limitations
 
 - Testnet/demo prototype only.
-- Contracts are not deployed yet.
+- ReceiptLedger is deployed on Casper Testnet; the broader AgentRegistry, PolicyVault, and ServiceRegistry contracts are roadmap/final-round scope.
 - Contracts are unaudited.
 - The LLM must not hold keys or sign transactions.
 - Policy decisions are deterministic and must happen before execution.

@@ -13,8 +13,10 @@ contracts/**/Cargo.lock
 contracts/**/.odra/
 contracts/**/wasm/
 contracts/**/resources/*-contracts.toml
+!contracts/agent-safe-odra/resources/casper-test-contracts.toml
 .DS_Store
 screenshots/
 tmp/
 proof/demo-proof.json
 proof/testnet-proof.json
+!proof/testnet-proof.json
