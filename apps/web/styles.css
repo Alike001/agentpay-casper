@@ -356,6 +356,27 @@ h3 {
   line-height: 1.55;
 }
 
+.architecture-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.architecture-grid article {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 18px;
+}
+
+.architecture-grid p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .proof-strip {
   display: flex;
   justify-content: space-between;
@@ -386,6 +407,75 @@ h3 {
   font-weight: 800;
   padding: 0 14px;
   text-decoration: none;
+}
+
+.final-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.final-cta p {
+  max-width: 720px;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.dashboard-hero {
+  max-width: 1220px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.48fr);
+  gap: 18px;
+  align-items: end;
+  margin: 0 auto;
+  padding: 58px 32px 22px;
+}
+
+.dashboard-hero h1 {
+  max-width: 760px;
+  font-size: clamp(42px, 6vw, 76px);
+}
+
+.dashboard-hero p {
+  max-width: 760px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.55;
+}
+
+.dashboard-proof-card {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px;
+  box-shadow: 0 12px 30px rgba(23, 32, 51, 0.08);
+}
+
+.dashboard-proof-card code {
+  width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: #dce7ff;
+  padding: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
+.dashboard-section {
+  padding-top: 28px;
 }
 
 .app-shell {
@@ -655,8 +745,15 @@ button.secondary:hover {
   }
 
   .feature-grid,
+  .architecture-grid,
+  .dashboard-hero,
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .final-cta {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 

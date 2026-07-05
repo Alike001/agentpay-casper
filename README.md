@@ -4,16 +4,17 @@ Safe spending controls and receipt proofs for AI agents on Casper.
 
 AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026. It demonstrates an AI-agent commerce firewall: an agent can buy a demo RWA risk report only if the proposed action fits the user's policy, and an over-budget action is blocked before signing.
 
-## Demo
+## Demo Routes
 
-- Local app: `npm run dev`, then open `http://localhost:4173`
+- Landing page: `npm run dev`, then open `http://localhost:4173`
+- Working dashboard: `http://localhost:4173/dashboard`
 - Live app: TBD
 - Demo video: TBD
 - Casper Testnet proof: deployed ReceiptLedger + receipt transaction
 
 ## What Works Now
 
-- Static operational dashboard.
+- Separate landing page and operational dashboard.
 - Node API for state, simulation, and demo runs.
 - MCP-compatible JSON-RPC endpoint with policy and receipt tools.
 - Deterministic policy engine with reason codes.

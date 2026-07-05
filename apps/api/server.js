@@ -106,7 +106,11 @@ function proofReceipt() {
 
 async function serveStatic(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
-  const requestedPath = url.pathname === "/" ? "/index.html" : url.pathname;
+  const routeMap = {
+    "/": "/index.html",
+    "/dashboard": "/dashboard.html"
+  };
+  const requestedPath = routeMap[url.pathname] || url.pathname;
   const safePath = normalize(requestedPath).replace(/^(\.\.[/\\])+/, "");
   const filePath = join(webRoot, safePath);
 

@@ -8,7 +8,7 @@
   </head>
   <body>
     <header class="site-nav">
-      <a class="brand" href="#home" aria-label="AgentSafe Casper home">
+      <a class="brand" href="/" aria-label="AgentSafe Casper home">
         <span class="brand-mark">A</span>
         <span>
           <strong>AgentSafe</strong>
@@ -16,24 +16,24 @@
         </span>
       </a>
       <nav class="site-links" aria-label="Primary navigation">
-        <a href="#why">Why it matters</a>
-        <a href="#proof">Testnet proof</a>
-        <a href="#demo">Dashboard</a>
+        <a href="#problem">Problem</a>
+        <a href="#proof">Proof</a>
+        <a href="#architecture">Architecture</a>
       </nav>
-      <a class="nav-cta" href="#demo">Open demo</a>
+      <a class="nav-cta" href="/dashboard">Open dashboard</a>
     </header>
 
     <main>
-      <section id="home" class="hero">
+      <section class="hero landing-hero">
         <div class="hero-copy">
           <p class="eyebrow">Casper Agentic Buildathon 2026</p>
-          <h1>Policy-controlled spending for autonomous AI agents.</h1>
+          <h1>Let AI agents spend money without giving them unlimited authority.</h1>
           <p class="hero-lede">
-            AgentSafe lets AI agents call paid services only inside user-defined rules, then writes verifiable receipts to Casper Testnet.
+            AgentSafe Casper is a policy firewall for autonomous commerce. Agents can call paid services only inside explicit user rules, and approved actions leave Casper Testnet receipt proof.
           </p>
           <div class="hero-actions">
-            <a class="button" href="#demo">Run the demo</a>
-            <a class="button secondary" href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer">View receipt tx</a>
+            <a class="button" href="/dashboard">Launch working demo</a>
+            <a class="button secondary" href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer">View Testnet receipt</a>
           </div>
           <div class="hero-stats" aria-label="Project highlights">
             <div>
@@ -41,187 +41,119 @@
               <span>receipt written</span>
             </div>
             <div>
-              <strong>1 live contract</strong>
-              <span>Casper Testnet</span>
+              <strong>Odra contract</strong>
+              <span>deployed on Testnet</span>
             </div>
             <div>
               <strong>MCP-ready</strong>
-              <span>agent gateway</span>
+              <span>agent tool gateway</span>
             </div>
           </div>
         </div>
 
-        <div class="hero-scene" aria-label="AgentSafe payment flow preview">
+        <div class="hero-scene landing-terminal" aria-label="AgentSafe protocol preview">
+          <div class="terminal-bar">
+            <span></span>
+            <span></span>
+            <span></span>
+            <strong>agentsafe://rwa-report</strong>
+          </div>
           <div class="flow-card active">
-            <span>AI request</span>
+            <span>Agent intent</span>
             <strong>Buy RWA risk report</strong>
-            <code>rwa_report_purchase</code>
+            <code>amount: 12.5 CSPR</code>
           </div>
           <div class="flow-line"></div>
           <div class="flow-card">
-            <span>Policy firewall</span>
-            <strong>Allowed under cap</strong>
+            <span>Policy decision</span>
+            <strong>Allowed by firewall</strong>
             <code>policy_daily_cap_rwa_allowlist</code>
           </div>
           <div class="flow-line"></div>
           <div class="flow-card success">
             <span>Casper receipt</span>
-            <strong>Recorded on Testnet</strong>
+            <strong>Written on Testnet</strong>
             <code>3116400a...4b79bd86</code>
           </div>
           <div class="blocked-callout">
-            <span>Blocked path</span>
+            <span>Rejected route</span>
             <strong>Overspend stops before signing</strong>
           </div>
         </div>
       </section>
 
-      <section id="why" class="section">
+      <section id="problem" class="section">
         <div class="section-heading">
-          <p class="eyebrow">Why it matters</p>
-          <h2>Agents need spending limits before they need bigger wallets.</h2>
+          <p class="eyebrow">The wedge</p>
+          <h2>Agent wallets are incomplete without policy, spending caps, and receipts.</h2>
           <p>
-            Agent commerce breaks if users cannot define authority, inspect decisions, and prove what happened after an autonomous action.
+            The next generation of AI agents will call paid APIs, trigger DeFi actions, and buy data. Users need a trust layer that decides what an agent is allowed to do before a signature or transaction is produced.
           </p>
         </div>
         <div class="feature-grid">
           <article>
             <span class="feature-index">01</span>
-            <h3>Policy Firewall</h3>
-            <p>Caps, allowlists, approval thresholds, expiry, and idempotency checks run before any transaction path.</p>
+            <h3>Bounded authority</h3>
+            <p>Per-action caps, daily budgets, service allowlists, expiry, approvals, and duplicate-action protection.</p>
           </article>
           <article>
             <span class="feature-index">02</span>
-            <h3>MCP Agent Gateway</h3>
-            <p>Agent tools expose simulation and execution flows without giving the LLM signing authority or policy override power.</p>
+            <h3>Agent-safe MCP</h3>
+            <p>The LLM can request actions and read proof, but it cannot bypass deterministic policy or hold signing authority.</p>
           </article>
           <article>
             <span class="feature-index">03</span>
-            <h3>Casper Receipt Ledger</h3>
-            <p>Approved actions become public Testnet evidence through an Odra smart contract and CSPR.live transaction links.</p>
+            <h3>Casper-native proof</h3>
+            <p>Approved actions are recorded through a deployed Odra ReceiptLedger contract on Casper Testnet.</p>
           </article>
         </div>
       </section>
 
       <section id="proof" class="proof-strip section">
         <div>
-          <p class="eyebrow">Live Casper proof</p>
-          <h2>Not a mock: this prototype already produced Testnet transactions.</h2>
+          <p class="eyebrow">Live protocol proof</p>
+          <h2>The qualification prototype already deployed and wrote a receipt on Casper Testnet.</h2>
         </div>
         <div class="proof-actions">
           <a href="https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411" target="_blank" rel="noreferrer">Deploy tx</a>
           <a href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer">Receipt tx</a>
+          <a href="/dashboard">Open proof console</a>
         </div>
       </section>
 
-      <section id="demo" class="app-shell section">
-        <aside class="sidebar">
-          <div class="sidebar-label">Demo console</div>
-          <nav aria-label="Dashboard sections">
-            <a class="active" href="#dashboard" data-nav-link>Overview</a>
-            <a href="#policies" data-nav-link>Policies</a>
-            <a href="#services" data-nav-link>Services</a>
-            <a href="#receipts" data-nav-link>Receipts</a>
-            <a href="#contract-proof" data-nav-link>Proof</a>
-          </nav>
-        </aside>
-
-        <div class="dashboard">
-          <header id="dashboard" class="topbar section-anchor">
-            <div>
-              <p class="eyebrow">Working prototype</p>
-              <h2>Agent commerce firewall dashboard</h2>
-            </div>
-            <div class="wallet">
-              <span class="dot"></span>
-              casper-test-wallet
-            </div>
-          </header>
-
-          <div class="grid">
-            <article class="panel hero-panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Active agent</p>
-                  <h3 id="agent-name">RWA Buyer Agent</h3>
-                </div>
-                <span class="status success">Active</span>
-              </div>
-              <div class="metrics">
-                <div>
-                  <span>Per-action cap</span>
-                  <strong id="cap">$25</strong>
-                </div>
-                <div>
-                  <span>Daily budget</span>
-                  <strong id="budget">$50</strong>
-                </div>
-                <div>
-                  <span>Spent today</span>
-                  <strong id="spent">$0</strong>
-                </div>
-              </div>
-              <div class="actions">
-                <button id="run-allowed">Buy one RWA report</button>
-                <button id="run-blocked" class="secondary">Attempt overspend</button>
-              </div>
-            </article>
-
-            <article id="policies" class="panel section-anchor">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Policies</p>
-                  <h3>Firewall rules</h3>
-                </div>
-                <span class="status success">Enforced</span>
-              </div>
-              <ul class="rules" id="rules"></ul>
-            </article>
-
-            <article id="services" class="panel section-anchor">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Services</p>
-                  <h3>RWA Risk Report API</h3>
-                </div>
-                <span class="status neutral">MCP tool</span>
-              </div>
-              <div class="service">
-                <span>Service ID</span>
-                <code>svc-rwa-risk</code>
-                <span>Endpoint hash</span>
-                <code>hash-endpoint-rwa-risk</code>
-                <span>Agent commerce role</span>
-                <code>paid RWA intelligence provider</code>
-              </div>
-            </article>
-
-            <article id="contract-proof" class="panel section-anchor">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Casper Testnet</p>
-                  <h3>Live proof</h3>
-                </div>
-                <span class="status success">Deployed</span>
-              </div>
-              <div id="testnet-proof" class="proof-list"></div>
-            </article>
-
-            <article id="receipts" class="panel wide section-anchor">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow">Receipts</p>
-                  <h3>Proof timeline</h3>
-                </div>
-                <span id="last-reason" class="status neutral">Waiting</span>
-              </div>
-              <div id="timeline" class="timeline"></div>
-            </article>
-          </div>
+      <section id="architecture" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">System design</p>
+          <h2>A practical trust layer for agent commerce on Casper.</h2>
         </div>
+        <div class="architecture-grid">
+          <article>
+            <h3>Frontend</h3>
+            <p>Landing page for the product story, dashboard for policy simulation, receipt proof, and demo actions.</p>
+          </article>
+          <article>
+            <h3>Policy engine</h3>
+            <p>Deterministic JavaScript package checks agent status, service allowlist, action caps, budget, approvals, and idempotency.</p>
+          </article>
+          <article>
+            <h3>MCP gateway</h3>
+            <p>JSON-RPC tool surface gives agents controlled access to simulate, execute, and inspect Casper proof.</p>
+          </article>
+          <article>
+            <h3>Casper contract</h3>
+            <p>Odra ReceiptLedger records approved commerce receipts and exposes readback state for judges and users.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section final-cta">
+        <div>
+          <p class="eyebrow">Working demo</p>
+          <h2>Try the exact flow judges should see.</h2>
+          <p>Open the dashboard, run the approved RWA report purchase, then attempt an overspend and watch it fail before signing.</p>
+        </div>
+        <a class="button" href="/dashboard">Go to dashboard</a>
       </section>
     </main>
-
-    <script type="module" src="/app.js"></script>
   </body>
 </html>
