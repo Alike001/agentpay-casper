@@ -56,6 +56,18 @@ npm run proof:demo
 npm run dev
 ```
 
+## Public Deployment
+
+Recommended path for DoraHacks: deploy the Node web service from this GitHub repo on Render.
+
+- Build command: `npm run build`
+- Start command: `npm start`
+- Health check path: `/healthz`
+- Landing route: `/`
+- Dashboard route: `/dashboard`
+
+This repo includes `render.yaml` and `Dockerfile` for repeatable deployment.
+
 ## Proof Workflow
 
 ```bash

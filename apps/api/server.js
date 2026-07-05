@@ -22,6 +22,10 @@ const mime = {
 
 export const server = createServer(async (request, response) => {
   try {
+    if (request.url === "/healthz" && request.method === "GET") {
+      return sendJson(response, { ok: true, service: "agentsafe-casper" });
+    }
+
     if (request.url === "/api/state" && request.method === "GET") {
       return sendJson(response, publicState());
     }
