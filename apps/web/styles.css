@@ -25,6 +25,10 @@ body {
   font-size: 14px;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .shell {
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
@@ -165,6 +169,10 @@ h2 {
   border-radius: 8px;
   background: var(--surface);
   padding: 18px;
+}
+
+.section-anchor {
+  scroll-margin-top: 24px;
 }
 
 .wide {

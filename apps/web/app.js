@@ -9,11 +9,15 @@ const elements = {
   testnetProof: document.querySelector("#testnet-proof"),
   lastReason: document.querySelector("#last-reason"),
   runAllowed: document.querySelector("#run-allowed"),
-  runBlocked: document.querySelector("#run-blocked")
+  runBlocked: document.querySelector("#run-blocked"),
+  navLinks: document.querySelectorAll("[data-nav-link]")
 };
 
 elements.runAllowed.addEventListener("click", () => runDemo("allowed"));
 elements.runBlocked.addEventListener("click", () => runDemo("blocked"));
+elements.navLinks.forEach((link) => {
+  link.addEventListener("click", () => setActiveNav(link));
+});
 
 await refresh();
 
@@ -118,6 +122,12 @@ function shortHash(value) {
 function setReason(text, status) {
   elements.lastReason.textContent = text;
   elements.lastReason.className = `status ${status}`;
+}
+
+function setActiveNav(activeLink) {
+  elements.navLinks.forEach((link) => {
+    link.classList.toggle("active", link === activeLink);
+  });
 }
 
 async function getJson(url) {

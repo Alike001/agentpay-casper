@@ -17,15 +17,15 @@
           </div>
         </div>
         <nav>
-          <a class="active" href="#">Dashboard</a>
-          <a href="#">Policies</a>
-          <a href="#">Services</a>
-          <a href="#">Receipts</a>
+          <a class="active" href="#dashboard" data-nav-link>Dashboard</a>
+          <a href="#policies" data-nav-link>Policies</a>
+          <a href="#services" data-nav-link>Services</a>
+          <a href="#receipts" data-nav-link>Receipts</a>
         </nav>
       </aside>
 
       <main>
-        <header class="topbar">
+        <header id="dashboard" class="topbar">
           <div>
             <p class="eyebrow">Casper Agentic Buildathon</p>
             <h1>Let AI agents spend safely on Casper.</h1>
@@ -65,7 +65,7 @@
             </div>
           </article>
 
-          <article class="panel">
+          <article id="policies" class="panel section-anchor">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Policy</p>
@@ -75,7 +75,7 @@
             <ul class="rules" id="rules"></ul>
           </article>
 
-          <article class="panel wide">
+          <article id="receipts" class="panel wide section-anchor">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">Agent activity</p>
@@ -86,7 +86,7 @@
             <div id="timeline" class="timeline"></div>
           </article>
 
-          <article class="panel">
+          <article id="services" class="panel section-anchor">
             <div class="panel-header">
               <div>
                 <p class="eyebrow">MCP service</p>
