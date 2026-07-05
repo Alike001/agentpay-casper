@@ -1,4 +1,5 @@
 import { createReadStream } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, normalize } from "node:path";
@@ -10,6 +11,7 @@ const root = join(fileURLToPath(new URL(".", import.meta.url)), "../..");
 const webRoot = join(root, "apps/web");
 const port = Number(process.env.PORT || 4173);
 const state = createDemoState(new Date());
+const testnetProof = await loadTestnetProof();
 
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -66,8 +68,39 @@ function publicState() {
     agents: Object.values(state.agents),
     policies: Object.values(state.policies),
     services: Object.values(state.services),
-    receipts: state.receipts,
-    spentByAgent: state.spentByAgent
+    receipts: [proofReceipt(), ...state.receipts].filter(Boolean),
+    spentByAgent: state.spentByAgent,
+    testnetProof
+  };
+}
+
+async function loadTestnetProof() {
+  try {
+    const proofPath = join(root, "proof/testnet-proof.json");
+    return JSON.parse(await readFile(proofPath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function proofReceipt() {
+  if (!testnetProof) return null;
+  const receiptTx = testnetProof.transactions.receiptWritten;
+  const action = testnetProof.demoAction;
+  return {
+    id: testnetProof.stateProof.lastReceiptId,
+    agentId: action.agentId,
+    serviceId: action.serviceId,
+    actionType: "rwa_report_purchase",
+    amount: Number(action.amount) / 1_000_000_000,
+    currency: "CSPR",
+    policyHash: action.policyHash,
+    actionHash: action.actionHash,
+    resultHash: action.resultHash,
+    status: "recorded",
+    txHash: receiptTx.hash,
+    explorerUrl: receiptTx.explorerUrl,
+    createdAt: testnetProof.generatedAt
   };
 }
 

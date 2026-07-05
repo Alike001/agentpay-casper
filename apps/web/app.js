@@ -6,6 +6,7 @@ const elements = {
   spent: document.querySelector("#spent"),
   rules: document.querySelector("#rules"),
   timeline: document.querySelector("#timeline"),
+  testnetProof: document.querySelector("#testnet-proof"),
   lastReason: document.querySelector("#last-reason"),
   runAllowed: document.querySelector("#run-allowed"),
   runBlocked: document.querySelector("#run-blocked")
@@ -33,6 +34,7 @@ async function refresh() {
   ].map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
 
   renderTimeline(state.receipts);
+  renderProof(state.testnetProof);
 }
 
 async function runDemo(variant) {
@@ -70,13 +72,47 @@ function prependTimeline(item) {
 
 function renderTimelineItem(item) {
   const title = item.status === "blocked" ? "Blocked before signing" : "Receipt recorded";
+  const amount = item.currency ? `${item.amount} ${item.currency}` : `$${item.amount}`;
+  const proofLink = item.explorerUrl
+    ? `<a href="${escapeAttribute(item.explorerUrl)}" target="_blank" rel="noreferrer">View on CSPR.live</a>`
+    : "";
   return `
     <div class="timeline-item">
-      <strong>${escapeHtml(title)} <span>$${escapeHtml(String(item.amount))}</span></strong>
+      <strong>${escapeHtml(title)} <span>${escapeHtml(amount)}</span></strong>
       <span>${escapeHtml(item.actionType)} · ${escapeHtml(new Date(item.createdAt).toLocaleTimeString())}</span>
       <code>${escapeHtml(item.txHash)}</code>
+      ${proofLink}
     </div>
   `;
+}
+
+function renderProof(proof) {
+  if (!proof) {
+    elements.testnetProof.innerHTML = `<div class="proof-row"><span>Status</span><strong>Local demo only</strong></div>`;
+    return;
+  }
+
+  const receiptTx = proof.transactions.receiptWritten;
+  const deploy = proof.contracts.receiptLedger;
+  elements.testnetProof.innerHTML = [
+    proofRow("Network", proof.network),
+    proofRow("Package", proof.contracts.receiptLedger.packageHash),
+    proofLinkRow("Deploy tx", deploy.explorerUrl, deploy.deployHash),
+    proofLinkRow("Receipt tx", receiptTx.explorerUrl, receiptTx.hash),
+    proofRow("Receipt count", proof.stateProof.receiptCount)
+  ].join("");
+}
+
+function proofRow(label, value) {
+  return `<div class="proof-row"><span>${escapeHtml(label)}</span><code>${escapeHtml(String(value))}</code></div>`;
+}
+
+function proofLinkRow(label, href, value) {
+  return `<div class="proof-row"><span>${escapeHtml(label)}</span><a href="${escapeAttribute(href)}" target="_blank" rel="noreferrer">${escapeHtml(shortHash(value))}</a></div>`;
+}
+
+function shortHash(value) {
+  return `${value.slice(0, 10)}...${value.slice(-8)}`;
 }
 
 function setReason(text, status) {
@@ -99,8 +135,12 @@ async function postJson(url, body) {
 }
 
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (character) => {
+  return String(value).replace(/[&<>"']/g, (character) => {
     const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
     return map[character];
   });
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value);
 }

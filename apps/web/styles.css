@@ -273,7 +273,8 @@ button.secondary:hover {
 }
 
 .timeline-item code,
-.service code {
+.service code,
+.proof-row code {
   display: inline-block;
   width: 100%;
   max-width: 100%;
@@ -286,9 +287,38 @@ button.secondary:hover {
   font-size: 12px;
 }
 
+.timeline-item a,
+.proof-row a {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.timeline-item a:hover,
+.proof-row a:hover {
+  text-decoration: underline;
+}
+
 .service {
   display: grid;
   gap: 8px;
+}
+
+.proof-list {
+  display: grid;
+  gap: 10px;
+}
+
+.proof-row {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.proof-row span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (max-width: 900px) {
