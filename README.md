@@ -65,6 +65,8 @@ Recommended path for DoraHacks: deploy the Node web service from this GitHub rep
 - Health check path: `/healthz`
 - Landing route: `/`
 - Dashboard route: `/dashboard`
+- Fallback landing route: `/landing`
+- Fallback dashboard route: `/console`
 
 This repo includes `render.yaml` and `Dockerfile` for repeatable deployment.
 

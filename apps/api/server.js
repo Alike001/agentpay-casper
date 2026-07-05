@@ -112,7 +112,9 @@ async function serveStatic(request, response) {
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   const routeMap = {
     "/": "/index.html",
-    "/dashboard": "/dashboard.html"
+    "/landing": "/index.html",
+    "/dashboard": "/dashboard.html",
+    "/console": "/dashboard.html"
   };
   const requestedPath = routeMap[url.pathname] || url.pathname;
   const safePath = normalize(requestedPath).replace(/^(\.\.[/\\])+/, "");
