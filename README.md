@@ -4,13 +4,19 @@ Safe spending controls and receipt proofs for AI agents on Casper.
 
 AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026. It demonstrates an AI-agent commerce firewall: an agent can buy a demo RWA risk report only if the proposed action fits the user's policy, and an over-budget action is blocked before signing.
 
+## Live Demo
+
+- Landing page: https://agentsafe-casper.onrender.com/
+- Working dashboard: https://agentsafe-casper.onrender.com/dashboard
+- Health check: https://agentsafe-casper.onrender.com/healthz
+- GitHub repo: https://github.com/Alike001/agentsafe-casper
+- Casper Testnet proof: deployed `ReceiptLedger` contract + receipt write transaction
+
 ## Demo Routes
 
 - Landing page: `npm run dev`, then open `http://localhost:4173`
 - Working dashboard: `http://localhost:4173/dashboard`
-- Live app: TBD
 - Demo video: TBD
-- Casper Testnet proof: deployed ReceiptLedger + receipt transaction
 
 ## What Works Now
 
@@ -28,6 +34,9 @@ The qualification prototype has a transaction-producing Casper Testnet component
 
 | Evidence | Link |
 |---|---|
+| Live landing page | https://agentsafe-casper.onrender.com/ |
+| Live dashboard | https://agentsafe-casper.onrender.com/dashboard |
+| GitHub repo | https://github.com/Alike001/agentsafe-casper |
 | ReceiptLedger package | `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833` |
 | ReceiptLedger deploy tx | https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411 |
 | Receipt write tx | https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86 |
