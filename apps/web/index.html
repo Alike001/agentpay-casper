@@ -3,15 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AgentSafe Casper</title>
+    <title>AgentPay Casper</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
     <header class="site-nav">
-      <a class="brand" href="/" aria-label="AgentSafe Casper home">
+      <a class="brand" href="/" aria-label="AgentPay Casper home">
         <span class="brand-mark">A</span>
         <span>
-          <strong>AgentSafe</strong>
+          <strong>AgentPay</strong>
           <small>Casper</small>
         </span>
       </a>
@@ -20,19 +20,19 @@
         <a href="#proof">Proof</a>
         <a href="#architecture">Architecture</a>
       </nav>
-      <a class="nav-cta" href="/dashboard">Open dashboard</a>
+      <a class="nav-cta" href="/dashboard">Open console</a>
     </header>
 
     <main>
       <section class="hero landing-hero">
         <div class="hero-copy">
           <p class="eyebrow">Casper Agentic Buildathon 2026</p>
-          <h1>Let AI agents spend money without giving them unlimited authority.</h1>
+          <h1>Let AI agents pay APIs safely on Casper.</h1>
           <p class="hero-lede">
-            AgentSafe Casper is a policy firewall for autonomous commerce. Agents can call paid services only inside explicit user rules, and approved actions leave Casper Testnet receipt proof.
+            AgentPay Casper is an x402-style payment gateway for AI-agent commerce. API sellers can charge per request, buyer agents spend only inside policy, and approved calls leave Casper Testnet receipt proof.
           </p>
           <div class="hero-actions">
-            <a class="button" href="/dashboard">Launch working demo</a>
+            <a class="button" href="/dashboard">Open AgentPay console</a>
             <a class="button secondary" href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer">View Testnet receipt</a>
           </div>
           <div class="hero-stats" aria-label="Project highlights">
@@ -51,60 +51,60 @@
           </div>
         </div>
 
-        <div class="hero-scene landing-terminal" aria-label="AgentSafe protocol preview">
+        <div class="hero-scene landing-terminal" aria-label="AgentPay protocol preview">
           <div class="terminal-bar">
             <span></span>
             <span></span>
             <span></span>
-            <strong>agentsafe://rwa-report</strong>
+            <strong>agentpay://rwa-risk-api</strong>
           </div>
           <div class="flow-card active">
-            <span>Agent intent</span>
-            <strong>Buy RWA risk report</strong>
-            <code>amount: 12.5 CSPR</code>
+            <span>Paid API request</span>
+            <strong>GET /rwa-risk-report</strong>
+            <code>402 Payment Required · 10 CSPR</code>
           </div>
           <div class="flow-line"></div>
           <div class="flow-card">
-            <span>Policy decision</span>
-            <strong>Allowed by firewall</strong>
-            <code>policy_daily_cap_rwa_allowlist</code>
+            <span>Buyer agent policy</span>
+            <strong>Allowed before signing</strong>
+            <code>cap: 25 CSPR · budget: 50 CSPR</code>
           </div>
           <div class="flow-line"></div>
           <div class="flow-card success">
             <span>Casper receipt</span>
-            <strong>Written on Testnet</strong>
+            <strong>Payment proof recorded</strong>
             <code>3116400a...4b79bd86</code>
           </div>
           <div class="blocked-callout">
-            <span>Rejected route</span>
-            <strong>Overspend stops before signing</strong>
+            <span>Failed policy</span>
+            <strong>Overspend never reaches payment</strong>
           </div>
         </div>
       </section>
 
       <section id="problem" class="section">
         <div class="section-heading">
-          <p class="eyebrow">The wedge</p>
-          <h2>Agent wallets are incomplete without policy, spending caps, and receipts.</h2>
+          <p class="eyebrow">The product</p>
+          <h2>A checkout layer for AI agents buying paid APIs and RWA data.</h2>
           <p>
-            The next generation of AI agents will call paid APIs, trigger DeFi actions, and buy data. Users need a trust layer that decides what an agent is allowed to do before a signature or transaction is produced.
+            Agent commerce needs more than wallets. API sellers need a way to charge agents per request, and buyers need policy controls plus public receipts before autonomous systems can spend real value.
           </p>
         </div>
         <div class="feature-grid">
           <article>
             <span class="feature-index">01</span>
-            <h3>Bounded authority</h3>
-            <p>Per-action caps, daily budgets, service allowlists, expiry, approvals, and duplicate-action protection.</p>
+            <h3>Merchant API console</h3>
+            <p>Publish a paid RWA API with price, endpoint hash, service id, and a machine-readable payment requirement.</p>
           </article>
           <article>
             <span class="feature-index">02</span>
-            <h3>Agent-safe MCP</h3>
-            <p>The LLM can request actions and read proof, but it cannot bypass deterministic policy or hold signing authority.</p>
+            <h3>MCP buyer agent</h3>
+            <p>The agent requests the paid API through tools, but policy gates amount, service allowlist, budget, approvals, and replay.</p>
           </article>
           <article>
             <span class="feature-index">03</span>
-            <h3>Casper-native proof</h3>
-            <p>Approved actions are recorded through a deployed Odra ReceiptLedger contract on Casper Testnet.</p>
+            <h3>Casper receipt layer</h3>
+            <p>Approved agent purchases are committed through a deployed Odra ReceiptLedger contract on Casper Testnet.</p>
           </article>
         </div>
       </section>
@@ -121,23 +121,65 @@
         </div>
       </section>
 
+      <section id="casper-stack" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Built with Casper AI Toolkit</p>
+          <h2>The product path is mapped to Casper's agent economy primitives.</h2>
+          <p>
+            AgentPay is not a generic AI dashboard. The checkout flow is designed around x402-style API payment, MCP tool access, Odra contracts, Testnet receipt proof, and the CSPR.cloud/CSPR.click final-round path.
+          </p>
+        </div>
+        <div class="toolkit-grid">
+          <article>
+            <span>x402</span>
+            <h3>Paid API request</h3>
+            <p>Merchant endpoint returns a payment-required challenge for the buyer agent.</p>
+          </article>
+          <article>
+            <span>MCP</span>
+            <h3>Agent tool access</h3>
+            <p>Buyer agent calls policy and receipt tools through a controlled gateway.</p>
+          </article>
+          <article>
+            <span>Odra</span>
+            <h3>ReceiptLedger contract</h3>
+            <p>Approved API purchase is tied to a deployed Casper Testnet receipt.</p>
+          </article>
+          <article>
+            <span>CSPR.cloud</span>
+            <h3>Proof indexing path</h3>
+            <p>Explorer proof is live now; indexed receipt streaming is final-round scope.</p>
+          </article>
+          <article>
+            <span>CSPR.click</span>
+            <h3>Signing path</h3>
+            <p>Production buyer-agent payments should sign client-side, never through the LLM.</p>
+          </article>
+          <article>
+            <span>Testnet</span>
+            <h3>Transaction proof</h3>
+            <p>ReceiptLedger deploy and receipt write are publicly verifiable today.</p>
+          </article>
+        </div>
+      </section>
+
       <section id="architecture" class="section">
         <div class="section-heading">
           <p class="eyebrow">System design</p>
-          <h2>A practical trust layer for agent commerce on Casper.</h2>
+          <h2>Built around the Casper AI Toolkit primitives.</h2>
         </div>
         <div class="architecture-grid">
           <article>
-            <h3>Frontend</h3>
-            <p>Landing page for the product story, dashboard for policy simulation, receipt proof, and demo actions.</p>
+            <h3>x402-style payments</h3>
+            <p>The merchant endpoint responds with payment-required terms that an agent can satisfy only after policy approval.</p>
           </article>
           <article>
             <h3>Policy engine</h3>
-            <p>Deterministic JavaScript package checks agent status, service allowlist, action caps, budget, approvals, and idempotency.</p>
+            <p>Deterministic checks prevent overspend, unapproved services, expired policies, duplicate actions, and unsafe approvals.</p>
           </article>
           <article>
             <h3>MCP gateway</h3>
-            <p>JSON-RPC tool surface gives agents controlled access to simulate, execute, and inspect Casper proof.</p>
+            <p>JSON-RPC tool surface gives buyer agents controlled access to quote, simulate, execute, and inspect proof.</p>
           </article>
           <article>
             <h3>Casper contract</h3>
@@ -148,9 +190,9 @@
 
       <section class="section final-cta">
         <div>
-          <p class="eyebrow">Working demo</p>
-          <h2>Try the exact flow judges should see.</h2>
-          <p>Open the dashboard, run the approved RWA report purchase, then attempt an overspend and watch it fail before signing.</p>
+          <p class="eyebrow">Working product path</p>
+          <h2>Try the agent checkout flow judges should see.</h2>
+          <p>Open the console, let the buyer agent pay for one RWA API call, then attempt an over-budget request and watch AgentPay stop it before payment.</p>
         </div>
         <a class="button" href="/dashboard">Go to dashboard</a>
       </section>

@@ -1,8 +1,8 @@
 {
-  "name": "agentsafe-casper",
+  "name": "agentpay-casper",
   "version": "0.1.0",
   "private": true,
-  "description": "Safe spending controls and on-chain receipt scaffolding for AI agents on Casper.",
+  "description": "x402-style API payment gateway with policy controls and Casper Testnet receipt proof for AI agents.",
   "type": "module",
   "scripts": {
     "dev": "node apps/api/server.js",

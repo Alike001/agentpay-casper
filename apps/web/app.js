@@ -6,15 +6,20 @@ const elements = {
   spent: document.querySelector("#spent"),
   rules: document.querySelector("#rules"),
   timeline: document.querySelector("#timeline"),
+  checkoutCards: document.querySelector("#checkout-card-list"),
   testnetProof: document.querySelector("#testnet-proof"),
+  agentTrace: document.querySelector("#agent-trace-list"),
+  x402List: document.querySelector("#x402-list"),
   lastReason: document.querySelector("#last-reason"),
   runAllowed: document.querySelector("#run-allowed"),
   runBlocked: document.querySelector("#run-blocked"),
+  resetDemo: document.querySelector("#reset-demo"),
   navLinks: document.querySelectorAll("[data-nav-link]")
 };
 
 elements.runAllowed.addEventListener("click", () => runDemo("allowed"));
 elements.runBlocked.addEventListener("click", () => runDemo("blocked"));
+elements.resetDemo.addEventListener("click", resetDemo);
 elements.navLinks.forEach((link) => {
   link.addEventListener("click", () => setActiveNav(link));
 });
@@ -26,19 +31,22 @@ async function refresh() {
   const policy = state.policies[0];
   const spent = state.spentByAgent[policy.agentId] || 0;
 
-  elements.cap.textContent = `$${policy.maxAmountPerAction}`;
-  elements.budget.textContent = `$${policy.dailyBudget}`;
-  elements.spent.textContent = `$${spent}`;
+  elements.cap.textContent = `${policy.maxAmountPerAction} CSPR`;
+  elements.budget.textContent = `${policy.dailyBudget} CSPR`;
+  elements.spent.textContent = `${spent} CSPR`;
 
   elements.rules.innerHTML = [
     `Allowed service: ${policy.allowedServiceIds.join(", ")}`,
-    `Approval threshold: $${policy.approvalThreshold}`,
+    `Approval threshold: ${policy.approvalThreshold} CSPR`,
     `Policy hash: ${policy.policyHash}`,
     `Expires: ${new Date(policy.expiresAt).toLocaleDateString()}`
   ].map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
 
   renderTimeline(state.receipts);
+  renderCheckoutCards(state);
   renderProof(state.testnetProof);
+  renderAgentTrace(state.agentTrace);
+  renderX402Flow(state.x402Flow);
 }
 
 async function runDemo(variant) {
@@ -48,35 +56,27 @@ async function runDemo(variant) {
   const status = outcome.verdict === "allow" ? "success" : "destructive";
   setReason(outcome.reasonCode, status);
 
-  if (!result.receipt) {
-    prependTimeline({
-      id: `blocked-${Date.now()}`,
-      status: "blocked",
-      actionType: outcome.action.actionType,
-      amount: outcome.action.amount,
-      txHash: outcome.reasonCode,
-      createdAt: new Date().toISOString()
-    });
-  }
+  await refresh();
+}
 
+async function resetDemo() {
+  setReason("Resetting", "neutral");
+  await postJson("/api/reset", {});
+  setReason("Waiting", "neutral");
   await refresh();
 }
 
 function renderTimeline(receipts) {
   if (receipts.length === 0) {
-    elements.timeline.innerHTML = `<div class="timeline-item"><strong>No receipts yet</strong><span>Run the allowed action to create a demo receipt.</span></div>`;
+    elements.timeline.innerHTML = `<div class="timeline-item"><strong>No purchases yet</strong><span>Run the allowed API payment to create an AgentPay receipt.</span></div>`;
     return;
   }
   elements.timeline.innerHTML = receipts.map(renderTimelineItem).join("");
 }
 
-function prependTimeline(item) {
-  elements.timeline.insertAdjacentHTML("afterbegin", renderTimelineItem(item));
-}
-
 function renderTimelineItem(item) {
-  const title = item.status === "blocked" ? "Blocked before signing" : "Receipt recorded";
-  const amount = item.currency ? `${item.amount} ${item.currency}` : `$${item.amount}`;
+  const title = item.status === "blocked" ? "Payment blocked before signing" : "API purchase recorded";
+  const amount = item.currency ? `${item.amount} ${item.currency}` : `${item.amount} CSPR`;
   const proofLink = item.explorerUrl
     ? `<a href="${escapeAttribute(item.explorerUrl)}" target="_blank" rel="noreferrer">View on CSPR.live</a>`
     : "";
@@ -86,6 +86,76 @@ function renderTimelineItem(item) {
       <span>${escapeHtml(item.actionType)} · ${escapeHtml(new Date(item.createdAt).toLocaleTimeString())}</span>
       <code>${escapeHtml(item.txHash)}</code>
       ${proofLink}
+    </div>
+  `;
+}
+
+function renderCheckoutCards(state) {
+  const lastEvent = state.receipts[0] || {};
+  const decisionStep = state.agentTrace.find((step) => step.label === "Policy decision") || {};
+  const proofStep = state.agentTrace.find((step) => step.label === "Casper proof") || {};
+  const isBlocked = lastEvent.status === "blocked" || decisionStep.status === "blocked";
+  const isComplete = decisionStep.status === "complete";
+  const decisionStatus = isBlocked ? "destructive" : isComplete ? "success" : "neutral";
+  const decisionTitle = isBlocked || isComplete ? decisionStep.value : "Ready for policy check";
+  const decisionReason = isBlocked || isComplete ? decisionStep.value : "Waiting for agent action";
+  const receiptValue = isBlocked ? "No transaction signed" : proofStep.value || "Waiting for proof";
+
+  const cards = [
+    {
+      kind: "payment",
+      eyebrow: "HTTP payment request",
+      title: "402 Payment Required",
+      status: "10 CSPR",
+      rows: [
+        ["Endpoint", "GET /rwa-risk-report"],
+        ["Merchant", "RWA Risk Report API"],
+        ["Buyer", "RWA Procurement Agent"]
+      ]
+    },
+    {
+      kind: decisionStatus,
+      eyebrow: "Policy decision",
+      title: decisionTitle,
+      status: isBlocked ? "Blocked" : isComplete ? "Allowed" : "Ready",
+      rows: [
+        ["Per-request cap", elements.cap.textContent],
+        ["Daily budget", elements.budget.textContent],
+        ["Reason", decisionReason]
+      ]
+    },
+    {
+      kind: isBlocked ? "destructive" : "proof",
+      eyebrow: "Casper receipt",
+      title: isBlocked ? "Stopped before signing" : "Receipt proof",
+      status: isBlocked ? "No tx" : "Testnet",
+      rows: [
+        ["Receipt", receiptValue],
+        ["Ledger", "Odra ReceiptLedger"],
+        ["Network", state.testnetProof?.network || "casper-test"]
+      ]
+    }
+  ];
+
+  elements.checkoutCards.innerHTML = cards.map(renderCheckoutCard).join("");
+}
+
+function renderCheckoutCard(card) {
+  return `
+    <div class="checkout-card ${escapeAttribute(card.kind)}">
+      <div class="checkout-card-header">
+        <span>${escapeHtml(card.eyebrow)}</span>
+        <strong>${escapeHtml(card.status)}</strong>
+      </div>
+      <h4>${escapeHtml(card.title)}</h4>
+      <div class="checkout-card-rows">
+        ${card.rows.map(([label, value]) => `
+          <div>
+            <span>${escapeHtml(label)}</span>
+            <code>${escapeHtml(value)}</code>
+          </div>
+        `).join("")}
+      </div>
     </div>
   `;
 }
@@ -105,6 +175,31 @@ function renderProof(proof) {
     proofLinkRow("Receipt tx", receiptTx.explorerUrl, receiptTx.hash),
     proofRow("Receipt count", proof.stateProof.receiptCount)
   ].join("");
+}
+
+function renderAgentTrace(trace) {
+  elements.agentTrace.innerHTML = trace.map((step, index) => {
+    const status = step.status === "blocked" ? "destructive" : step.status === "complete" ? "success" : "neutral";
+    return `
+      <div class="trace-step">
+        <span class="trace-index">${String(index + 1).padStart(2, "0")}</span>
+        <div>
+          <strong>${escapeHtml(step.label)}</strong>
+          <code>${escapeHtml(step.value)}</code>
+        </div>
+        <span class="status ${status}">${escapeHtml(step.status)}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderX402Flow(flow) {
+  elements.x402List.innerHTML = flow.map((step) => `
+    <div class="protocol-step">
+      <strong>${escapeHtml(step.label)}</strong>
+      <span>${escapeHtml(step.value)}</span>
+    </div>
+  `).join("");
 }
 
 function proofRow(label, value) {

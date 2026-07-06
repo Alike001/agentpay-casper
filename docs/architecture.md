@@ -1,184 +1,116 @@
-# Architecture - Casper Agent Commerce Firewall
+# Architecture - AgentPay Casper
 
-Status: Draft  
-Architecture owner: pending implementation approval
+Status: Current qualification architecture
 
 ## System Overview
 
-Casper Agent Commerce Firewall has five layers:
+AgentPay Casper is a Casper-native agent checkout prototype with five layers:
 
-1. **Web dashboard** for users to manage agents, policies, service access, and receipts.
-2. **API backend** for app state, policy simulation, approvals, and chain indexing.
-3. **MCP gateway** exposing safe tools to AI agents.
-4. **AI orchestration** for planning and tool selection, never signing directly.
-5. **Casper contracts** for policy commitments, agent/service registry state, and receipts.
+1. **Landing page** explaining the product in under 30 seconds.
+2. **Product console** showing merchant API, buyer agent policy, checkout trace, receipts, and Casper proof.
+3. **Node API** serving app state, payment-flow runs, policy simulation, reset, static assets, and MCP-compatible requests.
+4. **Policy engine** enforcing deterministic spend rules before agent payment.
+5. **Casper proof layer** using an Odra `ReceiptLedger` contract deployed on Casper Testnet.
 
 ```text
-User Wallet
-  -> Web Dashboard
-  -> API Backend
-  -> Policy Engine
-  -> MCP Gateway
-  -> AI Agent Tool Calls
-  -> Casper Client
-  -> Casper Testnet Contracts
-  -> CSPR.cloud / Explorer Proof
-  -> Dashboard Timeline
+Merchant API
+  -> 402 Payment Required
+  -> Buyer Agent Intent
+  -> MCP-Compatible Gateway
+  -> Deterministic Policy Engine
+  -> Allowed / Blocked Decision
+  -> Session Receipt
+  -> Casper Testnet ReceiptLedger Proof
+  -> Console Timeline + Explorer Link
 ```
 
-## Stack
+## Current Stack
 
-| Layer | Choice | Reason |
+| Layer | Current Choice | Reason |
 |---|---|---|
-| Web | Next.js + TypeScript | Fast, demo-friendly, deployable |
-| UI | Tailwind + shadcn/ui | Accessible components and fast polish |
-| Wallet | CSPR.click first, Casper Wallet fallback | Best Casper UX if Testnet support validates |
-| API | Fastify + TypeScript | Lightweight, typed, low ceremony |
-| DB | Postgres + Prisma | Durable app/audit state |
-| Cache/queue | Redis + BullMQ | Stream cursors and async chain status |
-| MCP | TypeScript MCP SDK | Natural fit for agent tools |
-| AI | Provider abstraction over tool-calling LLM | Avoid provider lock-in |
-| Contracts | Rust + Odra | Casper-native contract DX |
-| Chain reads | CSPR.cloud + explorer fallback | Indexed proof and live status |
-| Tests | Vitest, Playwright, Odra/Rust tests | Unit, API, and e2e coverage |
+| Web | Static HTML/CSS/JS | Fast, deployable, low-risk before deadline |
+| API | Node HTTP server | No framework dependency; simple Render deployment |
+| Policy | Shared JavaScript package | Testable allow/block logic |
+| MCP | JSON-RPC-compatible `/mcp` endpoint | Demonstrates agent tool access without heavy setup |
+| Contracts | Rust + Odra | Casper-native smart-contract path |
+| Proof | `ReceiptLedger` on Casper Testnet + CSPR.live links | Verifiable transaction-producing component |
+| Deployment | Render Docker service | Public URL with health check |
+| Tests | Node test runner + Rust/Odra tests | Covers policy, MCP, demo state, and contract logic |
 
-## Smart Contracts
-
-### AgentRegistry
-
-Purpose: register agent identities controlled by a wallet.
-
-State:
-
-- `agent_id`
-- `owner`
-- `metadata_hash`
-- `status`: active, revoked
-- `created_at`
-
-Entrypoints:
-
-- `register_agent(metadata_hash)`
-- `revoke_agent(agent_id)`
-- `update_agent_metadata(agent_id, metadata_hash)`
-- `get_agent(agent_id)`
-
-Events:
-
-- `AgentRegistered`
-- `AgentRevoked`
-- `AgentUpdated`
-
-### PolicyVault
-
-Purpose: store enforceable policy commitments for an agent.
-
-State:
-
-- `agent_id`
-- `max_amount_per_action`
-- `daily_budget`
-- `allowed_service_ids`
-- `approval_threshold`
-- `expires_at`
-- `policy_hash`
-- `active`
-
-Entrypoints:
-
-- `set_policy(agent_id, policy_hash, constraints)`
-- `disable_policy(agent_id)`
-- `get_policy(agent_id)`
-
-Events:
-
-- `PolicySet`
-- `PolicyDisabled`
-
-### ServiceRegistry
-
-Purpose: register services/tools that agents may call.
-
-State:
-
-- `service_id`
-- `owner`
-- `endpoint_hash`
-- `pricing_hash`
-- `metadata_hash`
-- `active`
-
-Entrypoints:
-
-- `register_service(metadata_hash, endpoint_hash, pricing_hash)`
-- `deactivate_service(service_id)`
-- `get_service(service_id)`
-
-Events:
-
-- `ServiceRegistered`
-- `ServiceDeactivated`
+## Current Smart Contract
 
 ### ReceiptLedger
 
-Purpose: write audit receipts for agent actions.
+Purpose: record the latest approved agent API purchase receipt.
 
 State:
 
-- `receipt_id`
-- `agent_id`
-- `service_id`
-- `amount`
-- `action_hash`
-- `result_hash`
-- `policy_hash`
-- `status`
-- `created_at`
+- `receipt_count`
+- `last_receipt_id`
+- `last_agent_id`
+- `last_service_id`
+- `last_action_hash`
+- `last_result_hash`
+- `last_policy_hash`
+- `last_amount`
 
 Entrypoints:
 
-- `write_receipt(agent_id, service_id, action_hash, result_hash, amount, policy_hash, status)`
-- `get_receipt(receipt_id)`
+- `init`
+- `write_receipt(agent_id, service_id, action_hash, result_hash, policy_hash, amount)`
+- `receipt_count`
+- `last_receipt_id`
+- `last_agent_id`
+- `last_amount`
 
-Events:
+Current deployed proof:
 
-- `ReceiptWritten`
+- Package hash: `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833`
+- Deploy tx: `cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411`
+- Receipt write tx: `3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86`
 
-## Backend Services
+## API Surface
 
-### API
+- `GET /healthz`
+- `GET /api/state`
+- `POST /api/simulate`
+- `POST /api/run-demo`
+- `POST /api/reset`
+- `POST /mcp`
+- `GET /`
+- `GET /dashboard`
 
-Responsibilities:
+## MCP-Compatible Tools
 
-- Wallet session verification.
-- Agent and policy cache.
-- Approval request lifecycle.
-- Policy simulation endpoint.
-- Receipt and run history.
-- Chain proof ingestion from CSPR.cloud.
+- `casper_get_agent_policy`
+- `casper_list_services`
+- `casper_simulate_action`
+- `casper_execute_allowed_action`
+- `casper_write_receipt`
 
-Core routes:
+The gateway does not let the LLM sign, hold keys, or override policy. It exposes structured actions that are checked before execution.
 
-- `POST /agents`
-- `GET /agents/:id`
-- `POST /agents/:id/policy/simulate`
-- `POST /agents/:id/approvals`
-- `GET /receipts`
-- `GET /proof/:txHash`
-
-### Policy Engine
-
-The policy engine is deterministic and must not depend on LLM judgment.
+## Policy Engine
 
 Inputs:
 
-- Agent id.
-- Service id.
-- Proposed amount.
-- Action type.
-- Policy constraints.
-- Revocation status.
-- Optional approval status.
+- agent id
+- service id
+- action type
+- amount
+- idempotency key
+- optional approval id
+
+Checks:
+
+- agent active
+- policy active and unexpired
+- service exists and is active
+- service is allowlisted
+- idempotency key is unused
+- amount is under per-request cap
+- daily budget is available
+- approval exists when threshold is exceeded
 
 Outputs:
 
@@ -186,132 +118,28 @@ Outputs:
 - `block`
 - `needs_approval`
 
-Required checks:
+Reason codes include `ALLOWED`, `AMOUNT_OVER_LIMIT`, `BUDGET_EXCEEDED`, `APPROVAL_REQUIRED`, `SERVICE_NOT_ALLOWED`, `DUPLICATE_ACTION`, and `AGENT_REVOKED`.
 
-- Agent active.
-- Policy active and unexpired.
-- Service allowed.
-- Amount within limit.
-- Daily/test-run budget available.
-- Required approval present when threshold exceeded.
-- Idempotency key not reused.
+## Final-Round Architecture
 
-### MCP Gateway
+The qualification build proves the core product path. Final-round expansion should add:
 
-Tools:
-
-- `casper_get_agent_policy`
-- `casper_list_services`
-- `casper_quote_service`
-- `casper_simulate_action`
-- `casper_request_approval`
-- `casper_execute_allowed_action`
-- `casper_write_receipt`
-- `casper_revoke_agent`
-
-The gateway never signs directly. It prepares requests and passes signing work to the wallet/client path or a clearly scoped server-side Testnet-only demo signer if sponsor requirements allow it. Preferred MVP: user wallet signs protocol-critical writes.
-
-## AI Architecture
-
-The LLM is allowed to:
-
-- Interpret the user request.
-- Select a service.
-- Produce a structured proposed action.
-- Explain why an action was allowed or blocked.
-- Summarize receipts.
-
-The LLM is not allowed to:
-
-- Hold private keys.
-- Bypass the policy engine.
-- Modify policies without wallet approval.
-- Decide final allow/block alone.
-- Invent transaction proof.
-
-Prompt/tool pattern:
-
-1. User asks agent to perform action.
-2. LLM calls `casper_list_services`.
-3. LLM calls `casper_quote_service`.
-4. LLM proposes structured action.
-5. Policy engine checks action.
-6. If allowed, transaction path proceeds.
-7. LLM summarizes final proof from actual receipt data.
-
-## Data Model
-
-Postgres tables:
-
-- `users`
-- `wallet_sessions`
-- `agents`
-- `policies`
-- `services`
-- `approvals`
-- `agent_runs`
-- `tool_calls`
-- `receipts`
-- `chain_events`
-- `audit_logs`
-
-On-chain data remains source-of-truth for active policy and receipt commitments. Postgres is a cache plus richer UX/audit layer.
+- Full Casper x402 adapter.
+- CSPR.click wallet/signing flow.
+- CSPR.cloud deploy/contract streaming.
+- On-chain `AgentRegistry`.
+- On-chain `PolicyVault`.
+- On-chain `ServiceRegistry`.
+- Merchant SDK for publishing paid APIs.
+- Hosted MCP gateway docs.
+- Persistent database for accounts, merchants, policies, and receipts.
 
 ## Security Model
 
-Principles:
-
-- No LLM custody.
-- Wallet/user signs policy changes.
-- Policy engine is deterministic.
-- Contracts emit audit events.
-- All demo receipts link to tx hashes.
-- All irreversible or high-risk operations require explicit user approval.
-
-Threats and mitigations:
-
-| Threat | Mitigation |
-|---|---|
-| Prompt injection asks agent to overspend | Policy engine blocks over-budget action |
-| Revoked agent keeps acting | Policy engine checks chain/cache status before execution |
-| Duplicate receipt/action replay | Idempotency key and action hash |
-| Fake proof in UI | UI links to explorer/CSPR.cloud proof |
-| Service endpoint mutation | Store endpoint/pricing hashes in registry |
-
-## Deployment Plan
-
-Development:
-
-- Local Next.js app.
-- Local API/MCP server.
-- Local Postgres/Redis through Docker.
-- Casper Testnet contracts.
-
-Production demo:
-
-- Web: Vercel.
-- API/MCP: Railway/Fly.io/Render.
-- DB: Neon/Supabase.
-- Redis: Upstash.
-- Contracts: Casper Testnet.
-
-## CI
-
-Required checks:
-
-- `npm run lint`
-- `npm run typecheck`
-- `npm test`
-- contract tests
-- Playwright happy-path e2e
-
-## Evidence Checklist
-
-- Contract package hashes / addresses.
-- Transaction hashes for agent registration, policy set, receipt write.
-- Explorer links.
-- CSPR.cloud event/API screenshots or links.
-- Test output.
-- Demo video.
-- README proof table.
-
+- Testnet only.
+- Contracts are unaudited.
+- LLM output is untrusted.
+- LLM never holds private keys.
+- Policy decisions are deterministic.
+- Raw prompts, PII, and private service results should not be written on-chain.
+- Current console actions update session state; permanent proof is the recorded Casper Testnet deployment and receipt write.

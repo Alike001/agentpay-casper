@@ -1,7 +1,7 @@
 # Casper AI Toolkit Integration Plan
 
 Status: Draft  
-Purpose: map official Casper AI Toolkit resources to AgentSafe Casper implementation.
+Purpose: map official Casper AI Toolkit resources to AgentPay Casper implementation.
 
 ## Official Toolkit Signals
 
@@ -37,7 +37,7 @@ Sources:
 - Odra, if compatible and fast enough.
 - CSPR.cloud or explorer proof.
 - MCP-compatible project gateway.
-- x402-shaped paid service interface, even if full production x402 is P1.
+- x402-style paid API interface, even if full production x402 settlement is P1.
 
 ### P1 - Strong Finalist Signal
 
@@ -58,11 +58,12 @@ Use a layered MCP strategy:
 
 1. **Existing Casper MCP Server** for generic chain reads if setup is fast.
 2. **CSPR.trade MCP** for optional DeFi market data if Testnet/private mode works.
-3. **AgentSafe MCP Gateway** for our core differentiator:
+3. **AgentPay MCP Gateway** for our core differentiator:
    - policy simulation
-   - approval requests
-   - receipt writes
-   - service registry reads
+   - paid API requests
+   - checkout decisions
+   - receipt writes/proof summaries
+   - merchant service reads
    - proof summaries
 
 This avoids rebuilding generic Casper read tools while keeping our unique project centered on safe agent commerce.
@@ -71,14 +72,14 @@ This avoids rebuilding generic Casper read tools while keeping our unique projec
 
 Qualification fallback:
 
-- Implement an x402-shaped interface for a demo RWA report endpoint.
+- Implement an x402-style interface for a paid RWA report endpoint.
 - Record the paid service action as a Casper receipt.
 - Explain full x402 settlement as P1 if package integration risks the deadline.
 
 Preferred:
 
 - Use the official Casper x402 examples for client/server flow.
-- Agent requests report.
+- Buyer agent requests report.
 - Server returns `402 Payment Required`.
 - Agent/payment adapter satisfies payment.
 - Casper receipt records service id, action hash, result hash, amount, and policy hash.
@@ -108,4 +109,3 @@ Use CSPR.click for:
 Fallback:
 
 - Casper Wallet or testnet demo signer, with explicit user approval and Testnet-only disclosure.
-

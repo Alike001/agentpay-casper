@@ -13,7 +13,7 @@ Acceptance: `docs/build-approval-checklist.md` has all critical items checked or
 
 ## Brief 1 - Monorepo Skeleton
 
-Goal: Create a maintainable monorepo for AgentSafe Casper with web, API, MCP, contract, and shared package boundaries.
+Goal: Create a maintainable monorepo for AgentPay Casper with web, API, MCP, contract, and shared package boundaries.
 
 Constraints: Do not overbuild. Use TypeScript for app/API/MCP packages. Use Rust/Odra for contracts if compatible. Include `.env.example`, README scaffold, lint/type/test commands, and a single green-light command.
 
@@ -66,4 +66,3 @@ Goal: Prepare the public repo, README, demo video, CSPR.fans copy, and DoraHacks
 Constraints: README top half must include pitch, live/demo links, and proof table. State Testnet-only and unaudited limitations. Record backup video.
 
 Acceptance: Public repo is ready; demo video is public; README has proof links; `docs/submission-draft.md` has no unfilled required submission copy except live proof URLs that are filled after deployment.
-

@@ -1,13 +1,13 @@
-# AgentSafe Casper
+# AgentPay Casper
 
-Safe spending controls and receipt proofs for AI agents on Casper.
+AI-agent API payments on Casper, with policy controls and on-chain receipts.
 
-AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026. It demonstrates an AI-agent commerce firewall: an agent can buy a demo RWA risk report only if the proposed action fits the user's policy, and an over-budget action is blocked before signing.
+AgentPay Casper is a hackathon prototype for the Casper Agentic Buildathon 2026. It demonstrates an x402-style payment gateway for agent commerce: a merchant exposes a paid RWA Risk Report API, a buyer agent requests it through MCP-compatible tools, AgentPay checks spending policy before payment, and approved API purchases are tied to Casper Testnet receipt proof.
 
 ## Live Demo
 
 - Landing page: https://agentsafe-casper.onrender.com/
-- Working dashboard: https://agentsafe-casper.onrender.com/dashboard
+- Working console: https://agentsafe-casper.onrender.com/dashboard
 - Health check: https://agentsafe-casper.onrender.com/healthz
 - GitHub repo: https://github.com/Alike001/agentsafe-casper
 - Casper Testnet proof: deployed `ReceiptLedger` contract + receipt write transaction
@@ -15,27 +15,40 @@ AgentSafe Casper is a hackathon prototype for the Casper Agentic Buildathon 2026
 ## Demo Routes
 
 - Landing page: `npm run dev`, then open `http://localhost:4173`
-- Working dashboard: `http://localhost:4173/dashboard`
+- Working console: `http://localhost:4173/dashboard`
 - Demo video: TBD
 
 ## What Works Now
 
-- Separate landing page and operational dashboard.
-- Node API for state, simulation, and demo runs.
+- Separate landing page and product console.
+- Node API for state, simulation, payment-flow runs, and reset.
 - MCP-compatible JSON-RPC endpoint with policy and receipt tools.
+- Visible agent trace showing intent, MCP tool call, policy decision, payment route, and proof.
+- x402-style paid API flow for the RWA report merchant endpoint.
 - Deterministic policy engine with reason codes.
 - Rust contract-logic scaffold and tests for agent, policy, service, and receipt state.
 - Odra `ReceiptLedger` contract module with passing Odra test and Casper Testnet deployment.
 - Proof readiness and local demo proof scripts.
 
+## Built with Casper AI Toolkit
+
+| Casper primitive | How AgentPay uses it | Current status |
+|---|---|---|
+| Casper Testnet | Public receipt deployment and receipt write proof | Live |
+| Odra | `ReceiptLedger` smart contract and tests | Live |
+| MCP | Buyer-agent policy, service, execution, and receipt tools | Live project gateway |
+| x402 | HTTP payment-required flow for paid API checkout | x402-style prototype |
+| CSPR.cloud / CSPR.live | Verifiable deploy and receipt links | Explorer live, CSPR.cloud final-round |
+| CSPR.click | Client-side signing path for production buyer-agent payments | Final-round roadmap |
+
 ## Casper Testnet Proof
 
-The qualification prototype has a transaction-producing Casper Testnet component. `ReceiptLedger` records the approved agent action receipt for the RWA risk report demo.
+The qualification prototype has a transaction-producing Casper Testnet component. `ReceiptLedger` records the approved buyer-agent API purchase receipt for the RWA Risk Report flow.
 
 | Evidence | Link |
 |---|---|
 | Live landing page | https://agentsafe-casper.onrender.com/ |
-| Live dashboard | https://agentsafe-casper.onrender.com/dashboard |
+| Live console | https://agentsafe-casper.onrender.com/dashboard |
 | GitHub repo | https://github.com/Alike001/agentsafe-casper |
 | ReceiptLedger package | `hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833` |
 | ReceiptLedger deploy tx | https://testnet.cspr.live/transaction/cd352660b8e2d1de2df2a52a1e043774be139467f0c0ba57b7fc2e9e88b2c411 |
@@ -73,7 +86,7 @@ Recommended path for DoraHacks: deploy the Node web service from this GitHub rep
 - Start command: `npm start`
 - Health check path: `/healthz`
 - Landing route: `/`
-- Dashboard route: `/dashboard`
+- Console route: `/dashboard`
 - Fallback landing route: `/landing`
 - Fallback dashboard route: `/console`
 
@@ -88,11 +101,21 @@ npm run proof:demo
 
 `proof/demo-proof.json` is local-only evidence. `proof/testnet-proof.json` contains the real Casper Testnet deployment and receipt transaction proof.
 
+## Product Flow
+
+1. Merchant publishes `RWA Risk Report API` at `10 CSPR/request`.
+2. Buyer agent requests `GET /rwa-risk-report`.
+3. Merchant responds with `402 Payment Required`.
+4. AgentPay checks service allowlist, per-request cap, daily budget, approval threshold, and idempotency.
+5. Allowed purchase creates a session receipt and maps to permanent Casper Testnet proof.
+6. Over-budget purchase is blocked before signing/payment.
+
 ## API
 
 - `GET /api/state`
 - `POST /api/simulate`
 - `POST /api/run-demo`
+- `POST /api/reset`
 - `POST /mcp`
 
 Example MCP-style request:
@@ -117,8 +140,10 @@ Example MCP-style request:
 
 ## Security and Limitations
 
-- Testnet/demo prototype only.
+- Testnet prototype only.
 - ReceiptLedger is deployed on Casper Testnet; the broader AgentRegistry, PolicyVault, and ServiceRegistry contracts are roadmap/final-round scope.
+- Console button actions update session state; the permanent on-chain evidence is the recorded ReceiptLedger deploy and receipt write in `proof/testnet-proof.json`.
+- Full production x402 settlement is roadmap; the current build demonstrates the x402-style request/payment/policy/receipt flow.
 - Contracts are unaudited.
 - The LLM must not hold keys or sign transactions.
 - Policy decisions are deterministic and must happen before execution.

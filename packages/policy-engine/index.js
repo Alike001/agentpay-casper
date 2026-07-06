@@ -16,7 +16,7 @@ export function createDemoState(now = new Date("2026-07-03T12:00:00.000Z")) {
     agents: {
       "agent-rwa-001": {
         id: "agent-rwa-001",
-        name: "RWA Buyer Agent",
+        name: "RWA Procurement Agent",
         owner: "casper-test-wallet",
         status: "active",
         metadataHash: "hash-agent-rwa-buyer"

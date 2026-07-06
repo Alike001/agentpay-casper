@@ -1,165 +1,111 @@
-# PRD - Casper Agent Commerce Firewall
+# PRD - AgentPay Casper
 
-Status: Draft for approval  
-Build phase: Not started  
+Status: Current product cut  
+Build phase: Qualification prototype live  
 Target network: Casper Testnet  
 Hackathon: Casper Agentic Buildathon 2026 - Qualification Round
 
 ## Goal
 
-Build a demoable Casper Testnet application that lets a user create an AI agent spending policy, route agent tool calls through an MCP gateway, execute only allowed Casper actions, and record auditable on-chain receipts.
+Build a Casper-native agent checkout prototype where API sellers can expose paid services to AI agents, buyer agents can request those services through MCP-compatible tools, AgentPay enforces spending policy before payment, and approved purchases are tied to Casper Testnet receipt proof.
 
 ## One-Line Pitch
 
-Policy-controlled AI agent payments and tool calls on Casper, with on-chain receipts and revocation.
+AI-agent API payments on Casper, with policy controls and on-chain receipts.
 
 ## Target Users
 
-- Developers building autonomous agents that need to call paid tools or transact.
-- Teams experimenting with agent wallets but needing spending limits and audit logs.
-- Casper ecosystem builders looking for reusable MCP, wallet, and smart-contract examples.
+- API and data providers that want to monetize services for AI agents.
+- Developers building autonomous agents that need to buy paid APIs, RWA data, or DeFi intelligence.
+- Teams experimenting with agent wallets but needing spending limits, receipts, and audit logs.
+- Casper ecosystem builders looking for reusable x402, MCP, Odra, and receipt patterns.
 
 ## Problem
 
-AI agents are beginning to spend money, call APIs, and execute transactions. The missing production layer is not just wallet access. It is bounded authority: who allowed the agent to act, how much it can spend, which services it can call, when approval is required, and what receipt proves the action happened.
-
-Current agent-wallet products usually optimize for fast transaction execution. They rarely give a protocol-native, open-source policy and receipt layer that Casper builders can reuse.
+AI agents are becoming economic actors. They can call APIs, buy data, and trigger transactions, but current agent-wallet flows do not give sellers a clean payment interface or buyers a reliable policy layer. Agent commerce needs checkout infrastructure: payment required, policy approval, receipt proof, and blocked unsafe requests.
 
 ## Solution
 
-Casper Agent Commerce Firewall provides:
+AgentPay Casper provides:
 
-- A wallet-connected dashboard for creating agent policies.
-- Casper Testnet smart contracts for agent registration, service registration, policy state, and receipts.
-- An MCP server exposing safe Casper tools to AI agents.
-- A deterministic policy engine that allows, blocks, or escalates agent actions.
-- A live proof timeline powered by Casper transaction hashes, contract events, and indexed reads.
+- Merchant API console for a paid RWA Risk Report endpoint.
+- Buyer agent policy console with per-request cap, daily budget, allowlist, and approval threshold.
+- MCP-compatible gateway exposing safe paid-service tools.
+- x402-style request/payment/policy/receipt flow.
+- Deterministic policy engine that allows, blocks, or escalates agent purchases.
+- Casper Testnet `ReceiptLedger` proof for approved purchases.
 
-## Sponsor-Native Fit
+## Casper-Native Fit
 
-The project should be considered weak if Casper is removed. Casper is the trust layer for:
+The project is weak if Casper is removed. Casper provides:
 
-- Agent identity and revocation.
-- Spend policy commitments.
-- Service registry references.
-- Receipt and audit events.
-- Public transaction proof on Testnet.
-
-Relevant ecosystem primitives:
-
-- Casper smart contracts and Testnet.
-- Odra for Rust contract development and tests.
-- CSPR.click or Casper Wallet for user signing.
-- CSPR.cloud for indexed reads and live stream proof.
-- MCP for agent tool access.
-- x402 as an optional paid HTTP/API adapter if sponsor docs confirm it is valued.
-
-Official hackathon fit:
-
-- The page explicitly requires a working prototype on Casper Testnet with a transaction-producing on-chain component.
-- The page emphasizes Agentic AI, DeFi, RWA, MCP, x402, CSPR.click AI Agent Skill, CSPR.cloud APIs, Odra, and the Casper AI Toolkit.
-- The page rewards long-term launch plans and Casper ecosystem impact, so the reusable MCP/contracts/API angle is strategically important.
+- Odra smart-contract development.
+- Testnet transaction proof.
+- Receipt commitments for approved agent purchases.
+- Future on-chain agent, policy, and merchant registries.
+- Alignment with Casper AI Toolkit priorities: x402 micropayments, MCP blockchain access, CSPR.cloud reads/streams, CSPR.click signing, and verifiable AI outputs.
 
 ## Core User Journey
 
-1. User opens the dashboard and connects a Casper wallet.
-2. User creates an agent profile.
-3. User sets a policy:
-   - max spend per action
-   - allowed service ids
-   - daily/test run budget
-   - approval-required threshold
-   - expiration/revocation status
-4. User asks the agent to perform a paid tool action, ideally an x402-compatible or RWA-flavored demo service.
-5. Agent routes through the MCP gateway.
-6. Policy engine evaluates the proposed action.
-7. If allowed, the app executes a Casper Testnet transaction and writes a receipt.
-8. Dashboard shows the event, tx hash, receipt, and service result.
-9. User asks for an over-budget action.
-10. Policy engine blocks it and records the blocked attempt off-chain with an optional on-chain audit receipt.
+1. Merchant publishes `RWA Risk Report API` priced at `10 CSPR/request`.
+2. Buyer agent requests `GET /rwa-risk-report`.
+3. Merchant returns `402 Payment Required`.
+4. AgentPay routes the proposed purchase through MCP-compatible tools.
+5. Policy engine checks service allowlist, per-request cap, daily budget, approval threshold, expiry, revocation, and idempotency.
+6. If allowed, the purchase is recorded in the console and tied to Casper Testnet receipt proof.
+7. If over budget, AgentPay blocks before signing/payment.
 
 ## Demo Moment
 
-The strongest moment is a split proof:
+- Allowed: buyer agent pays for a `10 CSPR` RWA API call and Casper receipt proof is visible.
+- Blocked: buyer agent attempts a `100 CSPR` API call and AgentPay blocks it before payment.
 
-- Allowed: agent performs an action, Casper receipt appears live.
-- Blocked: agent tries to overspend, policy blocks it before signing.
+Frame for judges:
 
-This makes the product immediately understandable: the project is the missing seatbelt for autonomous agent commerce.
+> AgentPay is checkout infrastructure for AI agents on Casper.
 
-For community voting, the demo should be framed as: **"Let AI agents spend safely on Casper."**
+Frame for community:
+
+> Let AI agents pay APIs safely on Casper.
 
 ## MVP Scope
 
-### In Scope
+In scope:
 
-- Wallet connection.
-- Agent registration contract.
-- Policy contract.
-- Service registry contract.
-- Receipt ledger contract.
-- One demo service callable through MCP.
+- Merchant API card for a paid RWA endpoint.
+- Buyer agent policy and budget controls.
+- MCP-compatible tool surface.
 - Deterministic policy engine.
-- One agent workflow with allowed and blocked actions.
-- Dashboard with proof timeline.
-- Testnet deployment evidence.
-- README, architecture diagram, demo script, and limitations.
+- x402-style payment flow.
+- Odra `ReceiptLedger` contract on Casper Testnet.
+- Explorer proof links.
+- README, demo script, submission copy, and limitations.
 
-### Out of Scope
+Out of scope for qualification:
 
 - Mainnet funds.
 - Custodial private keys.
-- Fully decentralized service marketplace.
-- Real enterprise compliance integrations.
-- Autonomous trading/yield strategies.
+- Full production x402 settlement.
+- CSPR.click wallet signing.
+- CSPR.cloud live streaming.
+- On-chain AgentRegistry, PolicyVault, and ServiceRegistry.
 - Security audit claims.
 
 ## Success Metrics
 
-Hackathon success:
-
-- At least one deployed Casper Testnet contract address.
-- At least three real transaction hashes:
-  - create agent
-  - set/update policy
-  - write receipt
-- End-to-end demo works in under 90 seconds.
-- README has live proof links and setup instructions.
-- Tests cover allow, block, revoke, and receipt write paths.
-- Project has CSPR.fans-ready copy, screenshots, and a short demo clip before voting opens.
-
-Judge success:
-
-- Judge can explain the product after 30 seconds.
-- Judge can verify Casper usage without asking us.
-- Judge can see AI acting through a bounded tool path.
-
-## Acceptance Criteria
-
-- User can connect wallet and create an agent.
-- User can set a policy that is persisted on Casper Testnet.
-- Agent can request one tool action through the MCP gateway.
-- Policy engine blocks at least one unsafe action.
-- Policy engine allows at least one safe action.
-- Allowed action produces a Casper Testnet transaction and receipt.
-- Dashboard displays transaction proof.
-- Repo includes README, architecture, demo script, `.env.example`, and tests.
-
-## Open Validation Items
-
-- Verify exact DoraHacks submission URL and CSPR.fans voting process.
-- Confirm final Casper AI Toolkit integration path and whether Casper Manifest affects submission scoring.
-- Decide whether existing Casper MCP Server is integrated directly or referenced while we ship a project-specific MCP gateway.
-- Verify Casper-native x402 implementation docs and ecosystem-credit requirements.
-- Verify CSPR.click Testnet signing flow before committing to it as the primary wallet path.
-- Verify CSPR.cloud API access keys/rate limits and Testnet event indexing behavior.
+- Judge understands product in 30 seconds.
+- Live app and console are publicly accessible.
+- Casper Testnet receipt proof is visible without asking the team.
+- Allowed and blocked agent payment flows work in under 90 seconds.
+- README clearly states current proof, limitations, and final-round roadmap.
+- Tests cover policy, MCP tools, and payment-flow state.
 
 ## Risks
 
 | Risk | Impact | Mitigation |
 |---|---:|---|
-| Sponsor prefers simpler consumer apps | Medium | Demo as a concrete buyer-agent app, not only infra |
-| Wallet/Testnet friction | High | Start with contract proof and backup explorer links |
-| x402 integration consumes time | Medium | Keep x402 as P1 optional adapter |
-| AI agent appears unsafe | High | No LLM custody; deterministic policy gate before signing |
-| Too many contracts | High | Keep contracts simple: registry, policy, service, receipt |
+| Product still looks like a demo | High | Lead with merchant API, buyer agent, payment flow, and proof |
+| Full x402 integration takes too long | Medium | Ship x402-style flow now; keep production settlement as final-round scope |
+| Judges expect deeper on-chain policy | Medium | Be honest: ReceiptLedger is deployed now; registries/vaults are next |
+| Wallet/Testnet friction | High | Use recorded explorer proof and local session flow for the video |
+| AI usage appears thin | Medium | Make MCP/tool trace visible and explain model-as-intent, policy-as-authority |

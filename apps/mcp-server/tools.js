@@ -3,11 +3,11 @@ import { applyAllowedAction, evaluatePolicy } from "../../packages/policy-engine
 export const toolDefinitions = [
   {
     name: "casper_get_agent_policy",
-    description: "Return the active policy for an AgentSafe Casper agent."
+    description: "Return the active spending policy for an AgentPay Casper buyer agent."
   },
   {
     name: "casper_list_services",
-    description: "List services an agent may request through the firewall."
+    description: "List paid merchant APIs a buyer agent may request through AgentPay."
   },
   {
     name: "casper_simulate_action",
@@ -15,7 +15,7 @@ export const toolDefinitions = [
   },
   {
     name: "casper_execute_allowed_action",
-    description: "Execute an allowed demo action and write a receipt-shaped proof."
+    description: "Execute an allowed paid API call and write a receipt-shaped proof."
   },
   {
     name: "casper_write_receipt",
