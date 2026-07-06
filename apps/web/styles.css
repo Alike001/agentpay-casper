@@ -955,6 +955,77 @@ button.ghost:hover {
   margin-bottom: 12px;
 }
 
+.launchpad-panel {
+  border-color: rgba(227, 6, 19, 0.2);
+  background: linear-gradient(180deg, #ffffff 0%, #fff9f9 100%);
+}
+
+.launchpad-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(120px, 0.8fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.launchpad-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.launchpad-form label span,
+.launchpad-output span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.launchpad-form input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  padding: 0 12px;
+}
+
+.launchpad-form input:focus {
+  outline: 2px solid rgba(227, 6, 19, 0.18);
+  border-color: rgba(227, 6, 19, 0.55);
+}
+
+.launchpad-output {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.launchpad-output div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.launchpad-output code {
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  background: var(--code-bg);
+  color: #dce7ff;
+  padding: 7px 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
+
 .integration-panel {
   border-color: rgba(37, 88, 216, 0.18);
   background: linear-gradient(180deg, #ffffff 0%, #f7f9ff 100%);
@@ -1307,6 +1378,8 @@ button.ghost:hover {
   .dashboard-hero,
   .grid,
   .checkout-cards,
+  .launchpad-form,
+  .launchpad-output,
   .integration-grid {
     grid-template-columns: 1fr;
   }

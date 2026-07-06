@@ -1,4 +1,10 @@
 const stateUrl = "/api/state";
+let checkoutConfig = {
+  serviceName: "RWA Risk Report API",
+  price: 10,
+  cap: 25,
+  budget: 50
+};
 
 const elements = {
   cap: document.querySelector("#cap"),
@@ -14,6 +20,15 @@ const elements = {
   merchantChallenge: document.querySelector("#merchant-challenge"),
   merchantIntegration: document.querySelector("#merchant-integration-list"),
   autonomousRun: document.querySelector("#autonomous-run-list"),
+  launchpadForm: document.querySelector("#launchpad-form"),
+  launchpadStatus: document.querySelector("#launchpad-status"),
+  launchpadOutput: document.querySelector("#launchpad-output"),
+  configServiceName: document.querySelector("#config-service-name"),
+  configServicePrice: document.querySelector("#config-service-price"),
+  configCap: document.querySelector("#config-cap"),
+  configBudget: document.querySelector("#config-budget"),
+  merchantServiceName: document.querySelector("#merchant-service-name"),
+  merchantServicePrice: document.querySelector("#merchant-service-price"),
   lastReason: document.querySelector("#last-reason"),
   runAllowed: document.querySelector("#run-allowed"),
   runBlocked: document.querySelector("#run-blocked"),
@@ -24,11 +39,13 @@ const elements = {
 elements.runAllowed.addEventListener("click", () => runDemo("allowed"));
 elements.runBlocked.addEventListener("click", () => runDemo("blocked"));
 elements.resetDemo.addEventListener("click", resetDemo);
+elements.launchpadForm.addEventListener("submit", configureCheckout);
 elements.navLinks.forEach((link) => {
   link.addEventListener("click", () => setActiveNav(link));
 });
 
 await refresh();
+configureCheckoutPreview("Default checkout loaded");
 
 async function refresh() {
   const state = await getJson(stateUrl);
@@ -47,6 +64,7 @@ async function refresh() {
   ].map((rule) => `<li>${escapeHtml(rule)}</li>`).join("");
 
   renderTimeline(state.receipts);
+  applyCheckoutConfig();
   renderCheckoutCards(state);
   renderProof(state.testnetProof);
   renderAgentTrace(state.agentTrace);
@@ -71,6 +89,56 @@ async function resetDemo() {
   await postJson("/api/reset", {});
   setReason("Waiting", "neutral");
   await refresh();
+}
+
+function configureCheckout(event) {
+  event.preventDefault();
+  configureCheckoutPreview("Checkout generated");
+}
+
+function configureCheckoutPreview(statusText) {
+  const serviceName = elements.configServiceName.value.trim() || "RWA Risk Report API";
+  const price = clampNumber(elements.configServicePrice.value, 1, 50);
+  const cap = clampNumber(elements.configCap.value, 1, 100);
+  const budget = clampNumber(elements.configBudget.value, cap, 500);
+
+  checkoutConfig = { serviceName, price, cap, budget };
+  applyCheckoutConfig();
+  elements.launchpadStatus.textContent = statusText;
+  elements.launchpadStatus.className = "status success";
+  renderLaunchpadOutput();
+}
+
+function applyCheckoutConfig() {
+  const { serviceName, price, cap, budget } = checkoutConfig;
+  elements.configServicePrice.value = String(price);
+  elements.configCap.value = String(cap);
+  elements.configBudget.value = String(budget);
+  elements.cap.textContent = `${cap} CSPR`;
+  elements.budget.textContent = `${budget} CSPR`;
+  elements.merchantServiceName.textContent = serviceName;
+  elements.merchantServicePrice.textContent = `${price} CSPR/request`;
+}
+
+function renderLaunchpadOutput() {
+  const { price, cap, budget } = checkoutConfig;
+  elements.launchpadOutput.innerHTML = [
+    ["Generated endpoint", "GET /api/rwa-risk-report"],
+    ["Payment challenge", `402 Payment Required · ${price} CSPR`],
+    ["Receipt header", "x-agentpay-receipt"],
+    ["Buyer rule", `cap ${cap} CSPR · budget ${budget} CSPR`]
+  ].map(([label, value]) => `
+    <div>
+      <span>${escapeHtml(label)}</span>
+      <code>${escapeHtml(value)}</code>
+    </div>
+  `).join("");
+}
+
+function clampNumber(value, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return min;
+  return Math.min(Math.max(Math.round(numeric), min), max);
 }
 
 function renderTimeline(receipts) {
@@ -113,10 +181,10 @@ function renderCheckoutCards(state) {
       kind: "payment",
       eyebrow: "HTTP payment request",
       title: "402 Payment Required",
-      status: "10 CSPR",
+      status: `${checkoutConfig.price} CSPR`,
       rows: [
         ["Endpoint", "GET /rwa-risk-report"],
-        ["Merchant", "RWA Risk Report API"],
+        ["Merchant", checkoutConfig.serviceName],
         ["Buyer", "RWA Procurement Agent"]
       ]
     },
@@ -247,6 +315,7 @@ async function renderMerchantChallenge() {
 async function renderMerchantIntegration() {
   const catalog = await getJson("/api/merchant/services");
   const service = catalog.services[0];
+  const { price, serviceName } = checkoutConfig;
   const snippets = [
     {
       label: "Catalog",
@@ -262,7 +331,7 @@ async function renderMerchantIntegration() {
     },
     {
       label: "Service metadata",
-      value: `${service.id} · ${service.price} ${service.currency} · ${service.endpoint}`
+      value: `${service.id} · ${serviceName} · ${price} ${service.currency} · ${service.endpoint}`
     }
   ];
 

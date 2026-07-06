@@ -21,6 +21,7 @@ AgentPay Casper is a hackathon prototype for the Casper Agentic Buildathon 2026.
 ## What Works Now
 
 - Separate landing page and product console.
+- Checkout launchpad for configuring the service name, price, per-request cap, and daily budget in the console.
 - Node API for state, simulation, payment-flow runs, and reset.
 - MCP-compatible JSON-RPC endpoint with policy and receipt tools.
 - Visible agent trace showing intent, MCP tool call, policy decision, payment route, and proof.

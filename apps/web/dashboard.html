@@ -75,6 +75,36 @@
           </header>
 
           <div class="grid">
+            <article id="launchpad" class="panel wide section-anchor launchpad-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Checkout launchpad</p>
+                  <h3>Configure an AgentPay checkout</h3>
+                </div>
+                <span id="launchpad-status" class="status neutral">Ready</span>
+              </div>
+              <form id="launchpad-form" class="launchpad-form">
+                <label>
+                  <span>API service name</span>
+                  <input id="config-service-name" name="serviceName" value="RWA Risk Report API">
+                </label>
+                <label>
+                  <span>Price per request</span>
+                  <input id="config-service-price" name="servicePrice" type="number" min="1" max="50" value="10">
+                </label>
+                <label>
+                  <span>Per-request cap</span>
+                  <input id="config-cap" name="cap" type="number" min="1" max="100" value="25">
+                </label>
+                <label>
+                  <span>Daily budget</span>
+                  <input id="config-budget" name="budget" type="number" min="1" max="500" value="50">
+                </label>
+                <button type="submit">Generate checkout</button>
+              </form>
+              <div id="launchpad-output" class="launchpad-output"></div>
+            </article>
+
             <article class="panel hero-panel">
               <div class="panel-header">
                 <div>
@@ -130,9 +160,9 @@
               <div class="panel-header">
                 <div>
                   <p class="eyebrow">Merchant API</p>
-                  <h3>RWA Risk Report API</h3>
+                  <h3 id="merchant-service-name">RWA Risk Report API</h3>
                 </div>
-                <span class="status neutral">10 CSPR/request</span>
+                <span id="merchant-service-price" class="status neutral">10 CSPR/request</span>
               </div>
               <div class="service">
                 <span>Service ID</span>
