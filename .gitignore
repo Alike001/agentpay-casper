@@ -6,6 +6,7 @@ build/
 .env
 .env.*
 !.env.example
+.keys/
 coverage/
 *.log
 .data/
