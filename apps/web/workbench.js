@@ -50,7 +50,7 @@ function bindEvents() {
   $("#manual-draft").addEventListener("click", createManualMandate);
   elements.mandateSearch.addEventListener("input", renderMandateList);
   $("#activate-mandate").addEventListener("click", activateSelectedMandate);
-  $("#revoke-mandate").addEventListener("click", () => showToast("Revocation transaction support is pending the MandateGuard Testnet deployment."));
+  $("#revoke-mandate").addEventListener("click", () => showToast("Revocation transaction signing is the next wallet action to enable."));
   $("#run-policy-check").addEventListener("click", openActionDialog);
   $("#close-action").addEventListener("click", closeActionDialog);
   $("#cancel-action").addEventListener("click", closeActionDialog);

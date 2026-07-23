@@ -1,6 +1,11 @@
-last_updated = "2026-07-04T22:31:44Z"
+last_updated = "2026-07-23T15:30:00Z"
 
 [[contracts]]
 name = "ReceiptLedger"
 package_name = "ReceiptLedger"
 package_hash = "hash-aa362adaa1dbb9e67491e25206592104739e760ef754c8314d1b56bdda347833"
+
+[[contracts]]
+name = "MandateGuard"
+package_name = "MandateGuard"
+package_hash = "hash-eb5d3394550f634cf6c5ad6629a9b75362aea1cc2957319ea92a3eeee41db222"

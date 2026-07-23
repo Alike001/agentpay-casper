@@ -6,7 +6,7 @@ import express from "express";
 import { compileMandateIntent, csprToMotes } from "../../packages/ai-policy-compiler/index.js";
 import { createCasperX402Middleware } from "../../packages/casper-x402/index.js";
 import { buildCreateMandateTransaction } from "../../packages/casper-transactions/index.js";
-import { loadLocalEnvironment, publicRuntimeConfig } from "../../packages/config/index.js";
+import { DEFAULT_MANDATE_GUARD_PACKAGE_HASH, loadLocalEnvironment, publicRuntimeConfig } from "../../packages/config/index.js";
 import {
   canonicalPolicy,
   createMandateDraft,
@@ -20,6 +20,7 @@ import { handleOfficialMcpRequest } from "../mcp-server/server.js";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "../..");
 loadLocalEnvironment(root);
+process.env.MANDATE_GUARD_PACKAGE_HASH ||= DEFAULT_MANDATE_GUARD_PACKAGE_HASH;
 const webRoot = join(root, "apps/web");
 const port = Number(process.env.PORT || 4173);
 let state = createDemoState(new Date());

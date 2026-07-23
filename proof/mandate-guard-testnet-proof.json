@@ -1,0 +1,48 @@
+{
+  "network": "casper-test",
+  "status": "verified",
+  "generatedAt": "2026-07-23T15:30:00Z",
+  "account": {
+    "publicKey": "0183338d798ac607478d1eaf082d53db788163381d96b2d15ff90c11843defbca6",
+    "accountHash": "account-hash-4940c3325427fed8bf7d7caf5f32299ffdb4628dc78158ab71b8eccb32c3aadf"
+  },
+  "contract": {
+    "name": "MandateGuard",
+    "framework": "Odra",
+    "packageHash": "hash-eb5d3394550f634cf6c5ad6629a9b75362aea1cc2957319ea92a3eeee41db222",
+    "contractHash": "hash-51bc9c06ceba37c2343915b8b771ece32040c4af175d2792e05a735d6100d8df",
+    "wasmHash": "hash-d3924d310504aa7be3412a0ded810b2d376925565cad9a4dbb56555089c754c8",
+    "installTransaction": {
+      "hash": "751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d",
+      "explorerUrl": "https://testnet.cspr.live/transaction/751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d",
+      "blockHeight": 8599849
+    }
+  },
+  "mandate": {
+    "id": "agentpay-final-round-mandate-001",
+    "agent": "account-hash-3975323bebe4fc7eed16f29262ff7756fb745a00aa3a08f5c36a945bf924b2cb",
+    "agentId": "rwa-procurement-agent",
+    "policyHash": "c5749c8f9df10f03ce02f0f91dde1943d6efdc1f521b5c2dd4fc8a03c2114abb",
+    "allowedServiceId": "rwa-risk-report",
+    "maxAmountPerActionMotes": "25000000000",
+    "dailyBudgetMotes": "50000000000",
+    "approvalThresholdMotes": "0",
+    "validFrom": "2026-07-23T15:28:01Z",
+    "expiresAt": "2026-08-22T15:28:01Z",
+    "createTransaction": {
+      "hash": "afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab",
+      "explorerUrl": "https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab",
+      "blockHeight": 8600721,
+      "entryPoint": "create_mandate"
+    }
+  },
+  "verification": {
+    "source": "Casper Testnet RPC info_get_transaction",
+    "installationError": null,
+    "createMandateError": null
+  },
+  "notes": [
+    "This proof is separate from the historical qualification-round ReceiptLedger proof.",
+    "The mandate is Testnet-only, revocable by its owner, and has no x402 settlement attached yet."
+  ]
+}

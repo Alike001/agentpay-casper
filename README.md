@@ -10,6 +10,8 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 - Mandate Workbench: https://agentsafe-casper.onrender.com/dashboard
 - Demo video: https://youtu.be/Q91PSfwQnao
 - Repository: https://github.com/Alike001/agentpay-casper
+- MandateGuard installation: https://testnet.cspr.live/transaction/751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d
+- Active Testnet mandate: https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab
 - Existing Testnet receipt: https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86
 
 ## Product Flow
@@ -32,16 +34,16 @@ The backend never receives a wallet private key. An LLM cannot sign, activate a 
 | AI policy compilation | OpenAI Responses API with strict structured output; deterministic revalidation | Working; provider credits required |
 | MCP | Official MCP SDK and stateless Streamable HTTP transport at `POST /mcp` | Working |
 | Wallet signing | CSPR.click v2 client integration and unsigned Casper transaction builder | Code ready; production app ID required |
-| Odra authority | `MandateGuard` contract with owner, delegate, limits, service, expiry, revocation, and consumption checks | Contract and tests ready; Testnet deployment pending |
+| Odra authority | `MandateGuard` contract with owner, delegate, limits, service, expiry, revocation, and consumption checks | Deployed on Testnet; a bounded mandate is active |
 | Casper x402 | Official `@make-software/casper-x402` exact CEP-18 middleware | Code ready; facilitator and WCSPR configuration required |
 | CSPR.cloud | Runtime capability reporting and planned confirmation adapter | API key/integration pending |
-| Testnet evidence | Deployed Odra `ReceiptLedger` and transaction-producing receipt write | Live |
+| Testnet evidence | Deployed Odra `MandateGuard`, a real `create_mandate` call, and historical ReceiptLedger write | Live |
 
 The interface reports unconfigured integrations honestly. It does not present a draft as active or a submitted transaction as confirmed.
 
-## Existing Casper Testnet Proof
+## Casper Testnet Proof
 
-The qualification build deployed `ReceiptLedger` with Odra and wrote a receipt on Casper Testnet. This historical proof is preserved while `MandateGuard` is added for the final round.
+The qualification build deployed `ReceiptLedger` with Odra and wrote a receipt on Casper Testnet. The final-round build adds a deployed `MandateGuard` package and a real on-chain spending mandate. Both proof trails remain public and separate.
 
 | Evidence | Value |
 |---|---|
@@ -51,6 +53,19 @@ The qualification build deployed `ReceiptLedger` with Odra and wrote a receipt o
 | Network | `casper-test` |
 
 Machine-readable evidence is stored in [`proof/testnet-proof.json`](proof/testnet-proof.json).
+
+### Final-Round MandateGuard Proof
+
+| Evidence | Value |
+|---|---|
+| Package hash | `hash-eb5d3394550f634cf6c5ad6629a9b75362aea1cc2957319ea92a3eeee41db222` |
+| Install transaction | https://testnet.cspr.live/transaction/751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d |
+| `create_mandate` transaction | https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab |
+| Mandate | `agentpay-final-round-mandate-001` for `rwa-procurement-agent` |
+| Boundaries | 25 CSPR per action, 50 CSPR daily, owner approval required for agent actions, expires August 22, 2026 |
+| Network | `casper-test` |
+
+Machine-readable evidence is stored in [`proof/mandate-guard-testnet-proof.json`](proof/mandate-guard-testnet-proof.json). The public package hash is the default Testnet target, so a fresh AgentPay deployment can build a real unsigned activation transaction without private configuration.
 
 ## Casper-Native Architecture
 
@@ -90,7 +105,7 @@ npm run dev
 
 Open http://localhost:4173 and http://localhost:4173/dashboard.
 
-The manual mandate path works without an AI provider. Wallet activation and x402 settlement remain disabled until their required Testnet configuration is supplied.
+The manual mandate path works without an AI provider. `MandateGuard` is already deployed on Testnet; CSPR.click wallet registration is still required for browser-based signing, and x402 settlement remains disabled until its required Testnet configuration is supplied.
 
 ## Configuration
 

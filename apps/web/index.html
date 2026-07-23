@@ -35,7 +35,7 @@
             <p>Define what an agent may buy, how much it may spend, and when its authority expires. AgentPay compiles the mandate, your wallet approves it, and Casper anchors the authority and receipts.</p>
             <div class="intro-actions">
               <a class="button primary" href="/dashboard"><span>Create a mandate</span><i data-lucide="arrow-right"></i></a>
-              <a class="button secondary" href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer"><span>View Testnet proof</span><i data-lucide="external-link"></i></a>
+              <a class="button secondary" href="https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab" target="_blank" rel="noreferrer"><span>View Testnet mandate</span><i data-lucide="external-link"></i></a>
             </div>
           </div>
         </div>
@@ -43,13 +43,13 @@
         <div class="authority-map" aria-label="AgentPay mandate authority flow">
           <header class="map-header">
             <div><span>Spending mandate</span><strong>RWA data procurement</strong></div>
-            <span class="status draft"><i data-lucide="circle"></i>DRAFT</span>
+            <span class="status active"><i data-lucide="circle-check"></i>ACTIVE ON TESTNET</span>
           </header>
 
           <div class="authority-chain">
             <div class="chain-node owner-node">
               <span class="node-icon"><i data-lucide="wallet"></i></span>
-              <div><small>OWNER</small><strong>Casper wallet</strong><code>020390e3...02ee99d</code></div>
+              <div><small>OWNER</small><strong>Casper wallet</strong><code>0183338d...efbca6</code></div>
             </div>
             <div class="chain-link"><span>delegates</span><i data-lucide="arrow-right"></i></div>
             <div class="chain-node mandate-node">
@@ -64,10 +64,10 @@
           </div>
 
           <div class="mandate-constraints">
-            <div><span>Per action</span><strong>10 WCSPR</strong></div>
-            <div><span>Daily budget</span><strong>50 WCSPR</strong><small>0 consumed</small></div>
-            <div><span>Approval above</span><strong>10 WCSPR</strong></div>
-            <div><span>Expires</span><strong>7 days</strong></div>
+            <div><span>Per action</span><strong>25 CSPR</strong></div>
+            <div><span>Daily budget</span><strong>50 CSPR</strong><small>0 consumed</small></div>
+            <div><span>Approval above</span><strong>0 CSPR</strong></div>
+            <div><span>Expires</span><strong>Aug 22, 2026</strong></div>
           </div>
 
           <div class="service-branches">
@@ -105,14 +105,14 @@
             <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="arrow-down-to-line"></i></span><div><small>REQUEST</small><strong>RWA Risk Report API returns payment requirement</strong><code>HTTP 402 · 10 WCSPR · svc-rwa-risk</code></div></div>
             <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="shield-check"></i></span><div><small>POLICY</small><strong>Mandate permits the service and amount</strong><code>ALLOWED · budget remaining 40 WCSPR</code></div></div>
             <div class="timeline-row pending"><span class="timeline-marker"><i data-lucide="wallet-cards"></i></span><div><small>SETTLEMENT</small><strong>Wallet-bound x402 exact payment</strong><code>Casper Testnet · CEP-18 · configuration pending</code></div></div>
-            <div class="timeline-row live"><span class="timeline-marker"><i data-lucide="receipt-text"></i></span><div><small>EXISTING TESTNET EVIDENCE</small><strong>Odra ReceiptLedger write is publicly verifiable</strong><a href="https://testnet.cspr.live/transaction/3116400a1250d9bdfd76f7c80a07ec5474f4c48c219c710794cb2f304b79bd86" target="_blank" rel="noreferrer">3116400a...4b79bd86 <i data-lucide="external-link"></i></a></div></div>
+            <div class="timeline-row live"><span class="timeline-marker"><i data-lucide="scroll-text"></i></span><div><small>ON-CHAIN AUTHORITY</small><strong>MandateGuard mandate created on Casper Testnet</strong><a href="https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab" target="_blank" rel="noreferrer">afe0c811...030dbdab <i data-lucide="external-link"></i></a></div></div>
           </div>
           <aside class="proof-inspector">
-            <header><span>Casper evidence</span><strong>Qualification receipt</strong></header>
+            <header><span>Casper evidence</span><strong>MandateGuard authority</strong></header>
             <dl>
               <div><dt>Network</dt><dd>casper-test</dd></div>
-              <div><dt>Contract</dt><dd>Odra ReceiptLedger</dd></div>
-              <div><dt>Package</dt><dd><code>hash-aa362a...347833</code></dd></div>
+              <div><dt>Contract</dt><dd>Odra MandateGuard</dd></div>
+              <div><dt>Package</dt><dd><code>hash-eb5d33...1db222</code></dd></div>
               <div><dt>Status</dt><dd class="verified">VERIFIED</dd></div>
             </dl>
           </aside>
@@ -122,12 +122,12 @@
       <section class="casper-stack band">
         <div class="section-heading"><span>BUILT FOR CASPER AGENT COMMERCE</span><h2>Casper is the authority and evidence layer, not an added payment badge.</h2></div>
         <div class="stack-table" role="table" aria-label="Casper integrations">
-          <div class="stack-row" role="row"><strong>Odra</strong><span>MandateGuard source and deterministic contract tests</span><span class="state ready">CODE READY</span></div>
+          <div class="stack-row" role="row"><strong>Odra</strong><span>MandateGuard package and mandate deployed on Casper Testnet</span><span class="state live">VERIFIED</span></div>
           <div class="stack-row" role="row"><strong>Casper x402</strong><span>Official exact CEP-18 middleware adapter for paid services</span><span class="state pending">CONFIG PENDING</span></div>
           <div class="stack-row" role="row"><strong>CSPR.click</strong><span>Client-side wallet connection and transaction signing path</span><span class="state pending">APP ID PENDING</span></div>
           <div class="stack-row" role="row"><strong>Casper MCP</strong><span>Typed mandate, service, simulation, and execution tools</span><span class="state ready">ENDPOINT LIVE</span></div>
           <div class="stack-row" role="row"><strong>CSPR.cloud</strong><span>Confirmation and indexed evidence adapter</span><span class="state pending">KEY PENDING</span></div>
-          <div class="stack-row" role="row"><strong>Casper Testnet</strong><span>ReceiptLedger deployment and transaction-producing receipt proof</span><span class="state live">VERIFIED</span></div>
+          <div class="stack-row" role="row"><strong>Casper Testnet</strong><span>MandateGuard authority plus ReceiptLedger receipt proof</span><span class="state live">VERIFIED</span></div>
         </div>
       </section>
 

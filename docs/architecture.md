@@ -1,27 +1,26 @@
 # Architecture - AgentPay Casper
 
-Status: Current qualification architecture
+Status: Final-round Testnet architecture
 
 ## System Overview
 
-AgentPay Casper is a Casper-native agent checkout prototype with five layers:
+AgentPay Casper is a Casper-native spending-mandate product with five layers:
 
 1. **Landing page** explaining the product in under 30 seconds.
-2. **Product console** showing merchant API, buyer agent policy, checkout trace, receipts, and Casper proof.
-3. **Node API** serving app state, payment-flow runs, policy simulation, reset, static assets, and MCP-compatible requests.
-4. **Policy engine** enforcing deterministic spend rules before agent payment.
-5. **Casper proof layer** using an Odra `ReceiptLedger` contract deployed on Casper Testnet.
+2. **Mandate Workbench** for drafting, validating, evaluating, and wallet-signing agent authority.
+3. **Node API** serving persistent mandates, deterministic evaluations, static assets, MCP tools, and unsigned Casper transaction construction.
+4. **Policy engine** enforcing deterministic spend rules before an agent action.
+5. **Casper authority layer** using deployed Odra `MandateGuard` and historical `ReceiptLedger` contracts on Casper Testnet.
 
 ```text
-Merchant API
-  -> 402 Payment Required
-  -> Buyer Agent Intent
-  -> MCP-Compatible Gateway
+Human intent
+  -> AI draft (optional)
   -> Deterministic Policy Engine
-  -> Allowed / Blocked Decision
-  -> Session Receipt
-  -> Casper Testnet ReceiptLedger Proof
-  -> Console Timeline + Explorer Link
+  -> Owner wallet review and signing
+  -> Casper Testnet MandateGuard authority
+  -> MCP agent action evaluation
+  -> x402 settlement when configured
+  -> Receipt evidence and Explorer Link
 ```
 
 ## Current Stack
@@ -29,15 +28,33 @@ Merchant API
 | Layer | Current Choice | Reason |
 |---|---|---|
 | Web | Static HTML/CSS/JS | Fast, deployable, low-risk before deadline |
-| API | Node HTTP server | No framework dependency; simple Render deployment |
-| Policy | Shared JavaScript package | Testable allow/block logic |
-| MCP | JSON-RPC-compatible `/mcp` endpoint | Demonstrates agent tool access without heavy setup |
+| API | Express | Persistent mandate API and simple Render deployment |
+| Policy | Shared JavaScript package | Testable deterministic allow/block logic |
+| MCP | Official MCP SDK Streamable HTTP endpoint at `/mcp` | Typed, structured agent tools without signing authority |
 | Contracts | Rust + Odra | Casper-native smart-contract path |
-| Proof | `ReceiptLedger` on Casper Testnet + CSPR.live links | Verifiable transaction-producing component |
-| Deployment | Render Docker service | Public URL with health check |
-| Tests | Node test runner + Rust/Odra tests | Covers policy, MCP, demo state, and contract logic |
+| Proof | `MandateGuard` and `ReceiptLedger` on Casper Testnet + CSPR.live links | Verifiable authority plus receipt evidence |
+| Deployment | Render Node service | Public URL with health check |
+| Tests | Node test runner + Rust/Odra tests | Covers mandate, MCP, x402 adapter, policy, storage, and contract logic |
 
-## Current Smart Contract
+## Smart Contracts
+
+### MandateGuard
+
+Purpose: give an agent narrow, revocable, expiring authority without custody of the owner wallet.
+
+Core entry points:
+
+- `create_mandate`
+- `add_allowed_service`
+- `authorize_action`
+- `record_settlement`
+- `revoke_mandate`
+
+The contract stores the owner, delegate, limits, daily budget, approval threshold, expiry, allowed services, action replay state, and settlement hashes. It is deployed on Casper Testnet and has a verified `create_mandate` transaction:
+
+- Package hash: `hash-eb5d3394550f634cf6c5ad6629a9b75362aea1cc2957319ea92a3eeee41db222`
+- Install tx: `751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d`
+- Mandate tx: `afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab`
 
 ### ReceiptLedger
 
@@ -120,19 +137,11 @@ Outputs:
 
 Reason codes include `ALLOWED`, `AMOUNT_OVER_LIMIT`, `BUDGET_EXCEEDED`, `APPROVAL_REQUIRED`, `SERVICE_NOT_ALLOWED`, `DUPLICATE_ACTION`, and `AGENT_REVOKED`.
 
-## Final-Round Architecture
+## Remaining Integrations
 
-The qualification build proves the core product path. Final-round expansion should add:
-
-- Full Casper x402 adapter.
-- CSPR.click wallet/signing flow.
-- CSPR.cloud deploy/contract streaming.
-- On-chain `AgentRegistry`.
-- On-chain `PolicyVault`.
-- On-chain `ServiceRegistry`.
-- Merchant SDK for publishing paid APIs.
-- Hosted MCP gateway docs.
-- Persistent database for accounts, merchants, policies, and receipts.
+- CSPR.click needs a registered production app ID for browser wallet signing.
+- Casper x402 needs facilitator, payee, and WCSPR Testnet metadata for end-to-end settlement.
+- CSPR.cloud needs an API key for indexed confirmation and receipt reads.
 
 ## Security Model
 
@@ -142,4 +151,4 @@ The qualification build proves the core product path. Final-round expansion shou
 - LLM never holds private keys.
 - Policy decisions are deterministic.
 - Raw prompts, PII, and private service results should not be written on-chain.
-- Current console actions update session state; permanent proof is the recorded Casper Testnet deployment and receipt write.
+- Mandate drafts and evaluations are persisted locally by the application. Only confirmed Casper Testnet transactions are represented as on-chain authority or proof.

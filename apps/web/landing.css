@@ -60,6 +60,7 @@ h2 { margin: 7px 0 0; font-size: 32px; line-height: 1.12; font-weight: 760; }
 .map-header div strong { margin-top: 2px; font-size: 16px; }
 .status, .verdict, .state { display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 10px; font-weight: 800; }
 .status.draft { color: var(--muted); }
+.status.active { color: var(--green); }
 .status svg { width: 8px; height: 8px; fill: currentColor; }
 .authority-chain { display: grid; grid-template-columns: 1fr 100px 1fr 100px 1.2fr; align-items: stretch; border: 1px solid var(--border); }
 .chain-node { min-width: 0; min-height: 112px; display: grid; grid-template-columns: 36px minmax(0,1fr); align-items: center; gap: 12px; background: var(--white); padding: 18px; }

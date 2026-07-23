@@ -1,6 +1,9 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+// Public Testnet identifier for the AgentPay MandateGuard deployment.
+export const DEFAULT_MANDATE_GUARD_PACKAGE_HASH = "hash-eb5d3394550f634cf6c5ad6629a9b75362aea1cc2957319ea92a3eeee41db222";
+
 export function loadLocalEnvironment(workspaceRoot) {
   for (const filename of [".env.local", ".env"]) {
     const path = join(workspaceRoot, filename);
@@ -21,7 +24,7 @@ export function integrationStatus(env = process.env) {
     wallet: capability(Boolean(env.CSPR_CLICK_APP_ID), "CSPR.click", env.CSPR_CLICK_APP_ID ? "Casper Testnet" : "App ID required"),
     x402: capability(x402Fields.every((name) => Boolean(env[name])), "Casper x402", "CEP-18 exact settlement"),
     indexing: capability(Boolean(env.CSPR_CLOUD_API_KEY), "CSPR.cloud", env.CSPR_CLOUD_API_KEY ? "REST API" : "API key required"),
-    mandateContract: capability(Boolean(env.MANDATE_GUARD_PACKAGE_HASH), "Odra MandateGuard", env.MANDATE_GUARD_PACKAGE_HASH || "Deployment required"),
+    mandateContract: capability(true, "Odra MandateGuard", env.MANDATE_GUARD_PACKAGE_HASH || DEFAULT_MANDATE_GUARD_PACKAGE_HASH),
     receiptContract: capability(Boolean(env.RECEIPT_LEDGER_PACKAGE_HASH), "Odra ReceiptLedger", env.RECEIPT_LEDGER_PACKAGE_HASH || "Historical proof loaded")
   };
 }
@@ -31,7 +34,7 @@ export function publicRuntimeConfig(env = process.env) {
     network: "casper-test",
     caip2Network: "casper:casper-test",
     csprClickAppId: env.CSPR_CLICK_APP_ID || null,
-    mandateGuardPackageHash: env.MANDATE_GUARD_PACKAGE_HASH || null,
+    mandateGuardPackageHash: env.MANDATE_GUARD_PACKAGE_HASH || DEFAULT_MANDATE_GUARD_PACKAGE_HASH,
     receiptLedgerPackageHash: env.RECEIPT_LEDGER_PACKAGE_HASH || null,
     integrations: integrationStatus(env)
   };
