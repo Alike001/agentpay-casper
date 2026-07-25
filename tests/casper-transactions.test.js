@@ -53,11 +53,13 @@ test("rejects an invalid Casper Wallet signature before any node submission", as
 });
 
 test("normalizes a Casper Wallet serialized signature with its matching algorithm tag", () => {
-  const tagged = [2, ...Array.from({ length: 64 }, (_value, index) => index)];
+  const tagged = [2, ...Array.from({ length: 64 }, (_value, index) => index + 1)];
   const normalized = normalizeWalletSignature(tagged, "02" + "a".repeat(64));
 
-  assert.deepEqual([...normalized], tagged.slice(1));
-  assert.deepEqual([...normalizeWalletSignature(tagged.slice(1), "02" + "a".repeat(64))], tagged.slice(1));
+  assert.equal(normalized[0], 0x30);
+  assert.equal(normalized[1], 68);
+  assert.deepEqual([...normalized.slice(2, 36)], [0x02, 32, ...tagged.slice(1, 33)]);
+  assert.deepEqual([...normalizeWalletSignature(tagged.slice(1), "02" + "a".repeat(64))], [...normalized]);
 });
 
 test("classifies a successful Casper V2 execution as confirmed", () => {
