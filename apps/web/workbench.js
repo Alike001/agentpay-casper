@@ -312,9 +312,8 @@ function renderSelectedMandate() {
   $("#guard-package").textContent = appState.config.mandateGuardPackageHash || "Not deployed";
   $("#activation-transaction").innerHTML = transactionEvidence(mandate.activation);
   $("#activate-mandate").disabled = mandate.status !== "draft" || !validation.valid || !guardConfigured;
-  $("#activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with CSPR.click" : "MandateGuard Testnet deployment is required";
+  $("#activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with the owner wallet" : "MandateGuard Testnet deployment is required";
   const canRevoke = mandate.status === "active" && !mandate.revocation?.transactionHash;
-  $("activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with the owner wallet" : "MandateGuard Testnet deployment is required";
   const pendingActivation = mandate.status === "pending" && mandate.activation?.transactionHash;
   const pendingRevocation = mandate.status === "active" && mandate.revocation?.transactionHash && mandate.revocation?.status !== "confirmed";
   const canConfirm = Boolean(pendingActivation || pendingRevocation);
