@@ -54,6 +54,7 @@ function bindEvents() {
   $("#manual-draft").addEventListener("click", createManualMandate);
   elements.mandateSearch.addEventListener("input", renderMandateList);
   $("#activate-mandate").addEventListener("click", activateSelectedMandate);
+  $("#confirm-mandate").addEventListener("click", confirmSelectedMandate);
   $("#revoke-mandate").addEventListener("click", revokeSelectedMandate);
   $("#run-policy-check").addEventListener("click", openActionDialog);
   $("#close-action").addEventListener("click", closeActionDialog);
@@ -304,6 +305,7 @@ function renderSelectedMandate() {
   }).join("");
 
   const guardConfigured = Boolean(appState.config.mandateGuardPackageHash);
+  $("revocation-transaction").innerHTML = transactionEvidence(mandate.revocation);
   $("#guard-state").textContent = guardConfigured ? "Configured" : "Deployment required";
   $("#guard-state").className = `integration-state ${guardConfigured ? "live" : ""}`;
   $("#guard-package").textContent = appState.config.mandateGuardPackageHash || "Not deployed";
@@ -311,6 +313,13 @@ function renderSelectedMandate() {
   $("#activate-mandate").disabled = mandate.status !== "draft" || !validation.valid || !guardConfigured;
   $("#activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with CSPR.click" : "MandateGuard Testnet deployment is required";
   const canRevoke = mandate.status === "active" && !mandate.revocation?.transactionHash;
+  $("activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with the owner wallet" : "MandateGuard Testnet deployment is required";
+  const pendingActivation = mandate.status === "pending" && mandate.activation?.transactionHash;
+  const pendingRevocation = mandate.status === "active" && mandate.revocation?.transactionHash && mandate.revocation?.status !== "confirmed";
+  const canConfirm = Boolean(pendingActivation || pendingRevocation);
+  $("confirm-mandate").hidden = !canConfirm;
+  $("confirm-mandate").disabled = !canConfirm;
+  $("confirm-mandate").title = canConfirm ? "Verify the submitted transaction on Casper Testnet" : "";
   $("#revoke-mandate").disabled = !canRevoke;
   $("#revoke-mandate").title = canRevoke ? "Revoke this mandate with the owner wallet" : "Only confirmed active mandates without a pending revocation can be revoked";
   renderReceiptProof();
@@ -585,6 +594,27 @@ async function revokeSelectedMandate() {
   }
 }
 
+async function confirmSelectedMandate() {
+  const record = selectedRecord();
+  if (!record) return;
+  const operation = record.mandate.status === "pending" ? "activate" : "revoke";
+  const submission = operation === "activate" ? record.mandate.activation : record.mandate.revocation;
+  if (!submission?.transactionHash) {
+    showToast("No submitted Casper transaction is available to confirm.");
+    return;
+  }
+  setSyncState("Checking Casper Testnet...");
+  try {
+    const payload = await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/confirmations/${operation}`, {});
+    await refreshProductState();
+    showToast(confirmationMessage(payload.confirmation));
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    setSyncState("Workbench ready");
+  }
+}
+
 async function submitMandateOperation(record, operation) {
   const mandateId = encodeURIComponent(record.mandate.id);
   const built = await postJson(`/api/mandates/${mandateId}/transactions/${operation}`, {
@@ -656,6 +686,13 @@ function requireWallet() {
   if (appState.wallet?.public_key) return true;
   showToast("Connect an owner wallet first.");
   return false;
+}
+
+function confirmationMessage(confirmation) {
+  if (confirmation.status === "confirmed") return "Casper confirmed the transaction. Authority state has been updated.";
+  if (confirmation.status === "failed") return `Casper execution failed: ${confirmation.error || "unknown error"}`;
+  if (confirmation.status === "pending") return "Casper has not executed this transaction yet.";
+  return `Casper RPC is unavailable: ${confirmation.error || "try again shortly"}`;
 }
 
 function selectedRecord() {

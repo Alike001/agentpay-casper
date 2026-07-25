@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { compileMandateIntent, csprToMotes } from "../../packages/ai-policy-compiler/index.js";
 import { createCasperX402Middleware } from "../../packages/casper-x402/index.js";
-import { buildCreateMandateTransaction, buildRevokeMandateTransaction, submitCasperWalletSignature } from "../../packages/casper-transactions/index.js";
+import { buildCreateMandateTransaction, buildRevokeMandateTransaction, inspectCasperTransaction, submitCasperWalletSignature } from "../../packages/casper-transactions/index.js";
 import { DEFAULT_MANDATE_GUARD_PACKAGE_HASH, loadLocalEnvironment, publicRuntimeConfig } from "../../packages/config/index.js";
 import {
   canonicalPolicy,
@@ -203,6 +203,20 @@ app.post("/api/mandates/:mandateId/wallet-submissions/:operation", asyncRoute(as
     transactionHash: submitted.transactionHash,
     message: `${operation === "activate" ? "Activation" : "Revocation"} submitted. AgentPay is waiting for Casper confirmation.`
   });
+}));
+
+app.post("/api/mandates/:mandateId/confirmations/:operation", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const mandate = await requireMandate(request.params.mandateId);
+  const operation = String(request.params.operation);
+  if (!["activate", "revoke"].includes(operation)) throw httpError(404, "Unknown confirmation operation.");
+  const submission = operation === "activate" ? mandate.activation : mandate.revocation;
+  if (!submission?.transactionHash) throw httpError(409, "No submitted Casper transaction is available to confirm.");
+
+  const confirmation = await inspectCasperTransaction(submission.transactionHash);
+  const updated = applyCasperConfirmation(mandate, operation, confirmation);
+  await productStore.saveMandate(updated);
+  response.json({ mandate: withValidation(updated), confirmation });
 }));
 
 app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (request, response) => {
@@ -531,6 +545,27 @@ function recordWalletSubmission(mandate, operation, transactionHash) {
     updated.activation = { status: "submitted", transactionHash, submittedAt };
   } else {
     updated.revocation = { status: "submitted", transactionHash, submittedAt };
+  }
+  return updated;
+}
+
+export function applyCasperConfirmation(mandate, operation, confirmation) {
+  const checkedAt = confirmation.checkedAt || new Date().toISOString();
+  const updated = { ...mandate, updatedAt: checkedAt };
+  const field = operation === "activate" ? "activation" : "revocation";
+  updated[field] = { ...updated[field], ...confirmation, lastCheckedAt: checkedAt };
+
+  if (confirmation.status === "confirmed") {
+    updated[field].status = "confirmed";
+    updated[field].confirmedAt = checkedAt;
+    updated.status = operation === "activate" ? MandateStatus.ACTIVE : MandateStatus.REVOKED;
+  } else if (confirmation.status === "failed") {
+    updated[field].status = "failed";
+    if (operation === "activate") updated.status = MandateStatus.DRAFT;
+  } else if (confirmation.status === "pending") {
+    updated[field].status = "pending";
+  } else {
+    updated[field].status = "unavailable";
   }
   return updated;
 }

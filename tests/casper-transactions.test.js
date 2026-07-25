@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCreateMandateTransaction, buildRevokeMandateTransaction, submitCasperWalletSignature } from "../packages/casper-transactions/index.js";
+import { buildCreateMandateTransaction, buildRevokeMandateTransaction, classifyCasperTransactionResult, submitCasperWalletSignature } from "../packages/casper-transactions/index.js";
 import { createMandateDraft } from "../packages/mandate-engine/index.js";
 
 test("builds an unsigned Casper Testnet MandateGuard transaction from validated policy", () => {
@@ -50,4 +50,28 @@ test("rejects an invalid Casper Wallet signature before any node submission", as
     () => submitCasperWalletSignature(built.transaction, mandate.ownerPublicKey, [0]),
     /signature/i
   );
+});
+
+test("classifies a successful Casper V2 execution as confirmed", () => {
+  const confirmation = classifyCasperTransactionResult({
+    execution_info: {
+      block_hash: "block-hash",
+      execution_result: { Version2: { error_message: null } }
+    }
+  }, "a".repeat(64), "https://rpc.testnet.casper.network/rpc");
+
+  assert.equal(confirmation.status, "confirmed");
+  assert.equal(confirmation.blockHash, "block-hash");
+  assert.equal(confirmation.error, null);
+});
+
+test("classifies failed and unexecuted Casper transactions without claiming confirmation", () => {
+  const failed = classifyCasperTransactionResult({
+    execution_info: { execution_result: { Version2: { error_message: "User error: mandate exists" } } }
+  }, "b".repeat(64));
+  const pending = classifyCasperTransactionResult({ transaction: { hash: "c".repeat(64) } });
+
+  assert.equal(failed.status, "failed");
+  assert.match(failed.error, /mandate exists/);
+  assert.equal(pending.status, "pending");
 });

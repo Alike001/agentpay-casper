@@ -91,6 +91,43 @@ export async function submitCasperWalletSignature(transactionJson, signingPublic
   return { transactionHash: submitted.transactionHash, nodeUrl };
 }
 
+export async function inspectCasperTransaction(transactionHash, options = {}) {
+  const hash = String(transactionHash || "").replace(/^(transaction-|deploy-)/, "");
+  if (!/^[a-f0-9]{64}$/i.test(hash)) throw new TypeError("A 64-character Casper transaction hash is required.");
+
+  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://rpc.testnet.casper.network/rpc");
+  const client = new RpcClient(new HttpHandler(nodeUrl));
+  try {
+    const result = await client.getTransactionByTransactionHash(hash);
+    return classifyCasperTransactionResult(result, hash, nodeUrl);
+  } catch (error) {
+    if (isTransactionMissing(error)) return { status: "pending", transactionHash: hash, nodeUrl, checkedAt: new Date().toISOString() };
+    return {
+      status: "unavailable",
+      transactionHash: hash,
+      nodeUrl,
+      checkedAt: new Date().toISOString(),
+      error: String(error?.message || "Casper RPC request failed.")
+    };
+  }
+}
+
+export function classifyCasperTransactionResult(result, transactionHash = null, nodeUrl = null) {
+  const raw = result?.rawJSON || result || {};
+  const execution = raw.execution_info?.execution_result || raw.execution_result || raw.execution_results?.[0]?.result || null;
+  const blockHash = raw.execution_info?.block_hash || raw.block_hash || raw.execution_results?.[0]?.block_hash || null;
+  const errorMessage = execution?.Version2?.error_message ?? execution?.error_message ?? execution?.Failure?.error_message ?? execution?.Failure ?? null;
+  const status = execution ? (errorMessage ? "failed" : "confirmed") : "pending";
+  return {
+    status,
+    transactionHash: transactionHash || raw.transaction?.hash || raw.deploy?.hash || null,
+    blockHash,
+    nodeUrl,
+    checkedAt: new Date().toISOString(),
+    error: errorMessage ? String(errorMessage) : null
+  };
+}
+
 function normalizePackageHash(value) {
   const hash = String(value || "").replace(/^(hash-|contract-package-)/, "");
   if (!/^[a-f0-9]{64}$/.test(hash)) throw new TypeError("MANDATE_GUARD_PACKAGE_HASH must be a 64-character Casper package hash.");
@@ -106,4 +143,9 @@ function toSignatureBytes(value) {
     throw new TypeError("Casper Wallet signature must be a byte array or even-length hexadecimal string.");
   }
   return Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => Number.parseInt(byte, 16)));
+}
+
+function isTransactionMissing(error) {
+  const code = Number(error?.code ?? error?.sourceErr?.code);
+  return code === -32014 || /no such (transaction|deploy)|not found/i.test(String(error?.message || ""));
 }

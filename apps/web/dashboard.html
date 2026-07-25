@@ -80,6 +80,7 @@
               </div>
               <div class="heading-actions">
                 <button id="activate-mandate" class="command primary" type="button"><i data-lucide="fingerprint"></i><span>Approve with wallet</span></button>
+                <button id="confirm-mandate" class="command secondary" type="button" hidden><i data-lucide="refresh-cw"></i><span>Confirm on Casper</span></button>
                 <button id="revoke-mandate" class="icon-command destructive" type="button" title="Revoke mandate" aria-label="Revoke mandate"><i data-lucide="ban"></i></button>
               </div>
             </header>
@@ -155,6 +156,7 @@
                   <div><dt>Package hash</dt><dd><code id="guard-package">Not deployed</code></dd></div>
                   <div><dt>Policy hash</dt><dd><code id="policy-hash">-</code></dd></div>
                   <div><dt>Activation tx</dt><dd id="activation-transaction">Not submitted</dd></div>
+                  <div><dt>Revocation tx</dt><dd id="revocation-transaction">Not submitted</dd></div>
                 </dl>
               </section>
               <section class="workspace-section">

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyCasperConfirmation,
   buildAgentTrace,
   buildAutonomousRun,
   handleRwaRiskReport,
@@ -8,6 +9,47 @@ import {
   merchantServicesCatalog,
   x402Flow
 } from "../apps/api/server.js";
+
+test("changes mandate authority only after a confirmed Casper execution", () => {
+  const base = {
+    id: "mandate-confirmation-test",
+    status: "pending",
+    activation: { status: "submitted", transactionHash: "a".repeat(64) }
+  };
+  const pending = applyCasperConfirmation(base, "activate", {
+    status: "pending",
+    transactionHash: "a".repeat(64),
+    checkedAt: "2026-07-25T12:00:00.000Z"
+  });
+  const confirmed = applyCasperConfirmation(base, "activate", {
+    status: "confirmed",
+    transactionHash: "a".repeat(64),
+    blockHash: "block-hash",
+    checkedAt: "2026-07-25T12:01:00.000Z"
+  });
+
+  assert.equal(pending.status, "pending");
+  assert.equal(pending.activation.status, "pending");
+  assert.equal(confirmed.status, "active");
+  assert.equal(confirmed.activation.status, "confirmed");
+  assert.equal(confirmed.activation.blockHash, "block-hash");
+});
+
+test("does not revoke an active mandate when Casper reports a failed revocation", () => {
+  const updated = applyCasperConfirmation({
+    id: "mandate-revocation-test",
+    status: "active",
+    revocation: { status: "submitted", transactionHash: "b".repeat(64) }
+  }, "revoke", {
+    status: "failed",
+    transactionHash: "b".repeat(64),
+    error: "User error",
+    checkedAt: "2026-07-25T12:02:00.000Z"
+  });
+
+  assert.equal(updated.status, "active");
+  assert.equal(updated.revocation.status, "failed");
+});
 
 test("builds a visible allowed agent trace", () => {
   const trace = buildAgentTrace(
