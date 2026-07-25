@@ -8,6 +8,7 @@ const appState = {
   wallet: null,
   walletKind: null,
   casperWallet: null,
+  walletDisconnected: sessionStorage.getItem("agentpay.walletDisconnected") === "true",
   activeSection: "mandates",
   executions: []
 };
@@ -45,6 +46,7 @@ async function boot() {
 
 function bindEvents() {
   elements.walletButton.addEventListener("click", connectWallet);
+  $("#disconnect-wallet")?.addEventListener("click", disconnectWallet);
   $("#new-mandate").addEventListener("click", openCreateDrawer);
   $("#back-to-mandates").addEventListener("click", showMandateList);
   $$('[data-open-create]').forEach((button) => button.addEventListener("click", openCreateDrawer));
@@ -108,7 +110,7 @@ function bindCasperWallet() {
       window.addEventListener(window.AgentPayWalletAdapter.directEvent(eventName), clearWallet);
     }
     try {
-      if (await provider.isConnected()) await updateDirectWallet();
+      if (!appState.walletDisconnected && await provider.isConnected()) await updateDirectWallet();
     } catch {
       // A locked extension is not an application error; the wallet controls its own unlock flow.
     }
@@ -157,6 +159,8 @@ async function updateDirectWallet() {
 }
 
 function setActiveWallet(publicKey, kind, account) {
+  appState.walletDisconnected = false;
+  sessionStorage.removeItem("agentpay.walletDisconnected");
   appState.wallet = account;
   appState.walletKind = kind;
   elements.walletButton.classList.remove("secondary");
@@ -164,6 +168,7 @@ function setActiveWallet(publicKey, kind, account) {
   elements.walletRequirement.classList.add("connected");
   elements.walletRequirement.querySelector("strong").textContent = "Owner wallet connected";
   elements.walletRequirement.querySelector("span").textContent = `${shortHash(publicKey)} · ${kind === "casper-wallet" ? "Casper Wallet" : "CSPR.click"}`;
+  $("#disconnect-wallet").hidden = false;
   renderSelectedMandate();
 }
 
@@ -175,6 +180,14 @@ function clearWallet() {
   elements.walletRequirement.classList.remove("connected");
   elements.walletRequirement.querySelector("strong").textContent = "Owner wallet";
   elements.walletRequirement.querySelector("span").textContent = "Connect Casper Wallet or CSPR.click before compiling authority.";
+  $("#disconnect-wallet").hidden = true;
+}
+
+function disconnectWallet() {
+  appState.walletDisconnected = true;
+  sessionStorage.setItem("agentpay.walletDisconnected", "true");
+  clearWallet();
+  showToast("Wallet disconnected from AgentPay. Wallet-extension permissions remain controlled by the extension.");
 }
 
 async function refreshProductState() {
@@ -624,7 +637,15 @@ async function submitMandateOperation(record, operation) {
     ownerPublicKey: appState.wallet.public_key
   });
   if (appState.walletKind === "casper-wallet") {
-    const signed = await appState.casperWallet.sign(JSON.stringify(built.transaction), built.signingPublicKey);
+    let signed;
+    try {
+      signed = await appState.casperWallet.sign(JSON.stringify(built.transaction), built.signingPublicKey);
+    } catch (error) {
+      if (/request could not be completed/i.test(String(error?.message || ""))) {
+        throw new Error("Casper Wallet could not sign this request. Unlock the extension, select a Casper Testnet account, then approve again.");
+      }
+      throw error;
+    }
     if (!signed || signed.cancelled || !signed.signature) throw new Error("Casper Wallet approval was cancelled.");
     await postJson(`/api/mandates/${mandateId}/wallet-submissions/${operation}`, {
       ownerPublicKey: appState.wallet.public_key,

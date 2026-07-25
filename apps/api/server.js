@@ -279,7 +279,7 @@ app.use((error, _request, response, _next) => {
   const status = Number(error.statusCode || error.status || 500);
   response.status(status).json({
     error: error.name || "Error",
-    message: status >= 500 ? "The request could not be completed." : error.message
+    message: status >= 500 && !error.expose ? "The request could not be completed." : error.message
   });
 });
 
@@ -608,6 +608,7 @@ function asyncRoute(handler) {
 function httpError(statusCode, message) {
   const error = new Error(message);
   error.statusCode = statusCode;
+  error.expose = true;
   return error;
 }
 
