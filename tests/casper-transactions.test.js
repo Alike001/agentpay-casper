@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildCreateMandateTransaction, buildRevokeMandateTransaction, classifyCasperTransactionResult, submitCasperWalletSignature } from "../packages/casper-transactions/index.js";
+import { buildCreateMandateTransaction, buildRevokeMandateTransaction, classifyCasperTransactionResult, normalizeWalletSignature, submitCasperWalletSignature } from "../packages/casper-transactions/index.js";
 import { createMandateDraft } from "../packages/mandate-engine/index.js";
 
 test("builds an unsigned Casper Testnet MandateGuard transaction from validated policy", () => {
@@ -50,6 +50,14 @@ test("rejects an invalid Casper Wallet signature before any node submission", as
     () => submitCasperWalletSignature(built.transaction, mandate.ownerPublicKey, [0]),
     /signature/i
   );
+});
+
+test("normalizes a Casper Wallet serialized signature with its matching algorithm tag", () => {
+  const tagged = [2, ...Array.from({ length: 64 }, (_value, index) => index)];
+  const normalized = normalizeWalletSignature(tagged, "02" + "a".repeat(64));
+
+  assert.deepEqual([...normalized], tagged.slice(1));
+  assert.deepEqual([...normalizeWalletSignature(tagged.slice(1), "02" + "a".repeat(64))], tagged.slice(1));
 });
 
 test("classifies a successful Casper V2 execution as confirmed", () => {

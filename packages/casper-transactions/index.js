@@ -81,7 +81,7 @@ export async function submitCasperWalletSignature(transactionJson, signingPublic
   }
 
   const transaction = Transaction.fromJSON(transactionJson);
-  transaction.setSignature(toSignatureBytes(signature), PublicKey.fromHex(signingPublicKey));
+  transaction.setSignature(normalizeWalletSignature(signature, signingPublicKey), PublicKey.fromHex(signingPublicKey));
   if (!transaction.validate()) throw new TypeError("Casper Wallet signature did not validate against the stored transaction.");
 
   const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://rpc.testnet.casper.network/rpc");
@@ -143,6 +143,15 @@ function toSignatureBytes(value) {
     throw new TypeError("Casper Wallet signature must be a byte array or even-length hexadecimal string.");
   }
   return Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => Number.parseInt(byte, 16)));
+}
+
+export function normalizeWalletSignature(value, signingPublicKey) {
+  const bytes = toSignatureBytes(value);
+  const algorithmTag = Number.parseInt(String(signingPublicKey).slice(0, 2), 16);
+  // Casper Wallet returns a serialized Signature in some extension versions:
+  // algorithm tag plus the raw 64-byte signature expected by Transaction.setSignature.
+  if (bytes.length === 65 && bytes[0] === algorithmTag) return bytes.slice(1);
+  return bytes;
 }
 
 function isTransactionMissing(error) {
