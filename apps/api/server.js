@@ -15,7 +15,7 @@ import {
   validateMandate
 } from "../../packages/mandate-engine/index.js";
 import { JsonMandateStore } from "../../packages/mandate-store/index.js";
-import { applyAllowedAction, createDemoState, evaluatePolicy } from "../../packages/policy-engine/index.js";
+import { createGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 import { handleOfficialMcpRequest } from "../mcp-server/server.js";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "../..");
@@ -23,13 +23,11 @@ loadLocalEnvironment(root);
 process.env.MANDATE_GUARD_PACKAGE_HASH ||= DEFAULT_MANDATE_GUARD_PACKAGE_HASH;
 const webRoot = join(root, "apps/web");
 const port = Number(process.env.PORT || 4173);
-let state = createDemoState(new Date());
 const testnetProof = await loadProof("testnet-proof.json");
 const mandateGuardProof = await loadProof("mandate-guard-testnet-proof.json");
 if (!process.env.RECEIPT_LEDGER_PACKAGE_HASH && testnetProof?.contracts?.receiptLedger?.packageHash) {
   process.env.RECEIPT_LEDGER_PACKAGE_HASH = testnetProof.contracts.receiptLedger.packageHash;
 }
-let lastTrace = buildAgentTrace();
 const productStore = new JsonMandateStore(process.env.AGENTPAY_DATA_FILE || join(root, ".data/agentpay.json"));
 let storeInitialization;
 const ensureStore = () => storeInitialization ||= productStore.initialize();
@@ -56,28 +54,6 @@ app.get("/runtime-config.js", (_request, response) => {
 app.get("/api/state", (_request, response) => response.json(publicState()));
 app.get("/api/rwa-risk-report", handleRwaRiskReport);
 app.get("/api/merchant/services", (_request, response) => response.json(merchantServicesCatalog()));
-
-app.post("/api/simulate", (request, response) => response.json(evaluatePolicy(state, request.body)));
-app.post("/api/run-demo", (request, response) => {
-  const action = {
-    agentId: "agent-rwa-001",
-    serviceId: "svc-rwa-risk",
-    actionType: "rwa_report_purchase",
-    amount: request.body.variant === "blocked" ? 100 : 10,
-    idempotencyKey: `qualification-${request.body.variant || "allowed"}-${Date.now()}`
-  };
-  const result = request.body.variant === "blocked"
-    ? { outcome: evaluatePolicy(state, action), receipt: null }
-    : applyAllowedAction(state, action, "hash-rwa-report-low-risk");
-  if (!result.receipt) state.receipts.unshift(blockedPaymentEvent(action, result.outcome));
-  lastTrace = buildAgentTrace(action, result.outcome, result.receipt);
-  response.json(result);
-});
-app.post("/api/reset", (_request, response) => {
-  state = createDemoState(new Date());
-  lastTrace = buildAgentTrace();
-  response.json({ ok: true, state: publicState() });
-});
 
 app.get("/api/mandates", asyncRoute(async (_request, response) => {
   await ensureStore();
@@ -112,32 +88,54 @@ app.post("/api/mandates/compile", asyncRoute(async (request, response) => {
   response.status(201).json(result);
 }));
 
-app.post("/api/mandates/:mandateId/evaluate", asyncRoute(async (request, response) => {
+app.post("/api/mandates/:mandateId/requests", createGatewayRequestHandler);
+app.post("/api/mandates/:mandateId/evaluate", (request, response, next) => {
+  response.set("deprecation", "true");
+  response.set("link", `</api/mandates/${request.params.mandateId}/requests>; rel=\"successor-version\"`);
+  return createGatewayRequestHandler(request, response, next);
+});
+
+app.get("/api/mandates/:mandateId/requests", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const requests = await productStore.listExecutions(request.params.mandateId);
+  response.json({ requests: requests.map(withGatewayTrace) });
+}));
+
+app.get("/api/mandates/:mandateId/requests/:requestId", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const gatewayRequest = await productStore.getExecution(request.params.requestId);
+  if (!gatewayRequest || gatewayRequest.mandateId !== request.params.mandateId) {
+    throw httpError(404, "Gateway request not found.");
+  }
+  response.json(withGatewayTrace(gatewayRequest));
+}));
+
+app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const requests = await productStore.listExecutions(request.params.mandateId);
+  response.json({ executions: requests.map(withGatewayTrace) });
+}));
+
+async function createGatewayRequestHandler(request, response) {
   await ensureStore();
   const mandate = await requireMandate(request.params.mandateId);
   const seenIdempotencyKeys = await productStore.seenIdempotencyKeys(mandate.id);
-  const decision = evaluateMandate(mandate, {
-    agentId: mandate.agentId,
-    serviceId: request.body.serviceId,
-    actionType: request.body.actionType || "paid_service_call",
-    amountMotes: request.body.amountMotes || csprToMotes(request.body.amountCSPR),
-    idempotencyKey: request.body.idempotencyKey,
-    approvalId: request.body.approvalId
-  }, { seenIdempotencyKeys });
-  const execution = {
-    id: `execution-${crypto.randomUUID()}`,
-    mandateId: mandate.id,
-    ...decision.action,
-    verdict: decision.verdict,
-    reasonCode: decision.reasonCode,
-    message: decision.message,
-    settlement: null,
-    receipt: null,
-    createdAt: new Date().toISOString()
-  };
-  await productStore.saveExecution(execution);
-  response.status(decision.verdict === "allow" ? 200 : 422).json({ decision, execution });
-}));
+  const gatewayRequest = createGatewayRequest({
+    mandate,
+    source: request.body.source || "rest",
+    seenIdempotencyKeys,
+    action: {
+      agentId: mandate.agentId,
+      serviceId: request.body.serviceId,
+      actionType: request.body.actionType || "paid_service_call",
+      amountMotes: request.body.amountMotes ?? csprToMotes(request.body.amountCSPR),
+      idempotencyKey: request.body.idempotencyKey,
+      approvalId: request.body.approvalId
+    }
+  });
+  await productStore.saveExecution(gatewayRequest);
+  response.status(201).json(withGatewayTrace(gatewayRequest));
+}
 
 app.post("/api/mandates/:mandateId/activation-submissions", asyncRoute(async (request, response) => {
   await ensureStore();
@@ -205,11 +203,6 @@ app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (re
   });
 }));
 
-app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, response) => {
-  await ensureStore();
-  response.json({ executions: await productStore.listExecutions(request.params.mandateId) });
-}));
-
 app.post("/mcp", asyncRoute(async (request, response) => {
   await ensureStore();
   await handleOfficialMcpRequest(request, response, request.body, {
@@ -253,13 +246,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 
 function publicState() {
   return {
-    agents: Object.values(state.agents),
-    policies: Object.values(state.policies),
-    services: Object.values(state.services),
-    receipts: [proofReceipt(), ...state.receipts].filter(Boolean),
-    spentByAgent: state.spentByAgent,
-    agentTrace: lastTrace,
-    autonomousRun: buildAutonomousRun(lastTrace),
+    agents: [],
+    policies: [],
+    services: merchantServicesCatalog().services,
+    receipts: [proofReceipt()].filter(Boolean),
+    spentByAgent: {},
+    agentTrace: [],
+    autonomousRun: [],
     x402Flow: x402Flow(),
     merchantApi: merchantApiPreview(),
     merchantServices: merchantServicesCatalog(),
@@ -301,10 +294,8 @@ function proofReceipt() {
 export function buildAgentTrace(action = null, outcome = null, receipt = null) {
   const decision = outcome?.reasonCode || "Waiting";
   const verdict = outcome?.verdict || "idle";
-  const amount = action?.amount ? `${action.amount} CSPR` : "12.5 CSPR demo receipt";
-  const receiptLabel = receipt
-    ? receipt.txHash
-    : testnetProof?.transactions?.receiptWritten?.hash || "No transaction yet";
+  const amount = action?.amount ? `${action.amount} WCSPR` : "No payment request yet";
+  const receiptLabel = receipt?.txHash || "Settlement has not been verified";
 
   return [
     {
@@ -339,19 +330,19 @@ export function x402Flow() {
   return [
     {
       label: "1. Buyer agent requests API",
-      value: "GET /rwa-risk-report"
+      value: "GET /api/x402/rwa-risk-report"
     },
     {
       label: "2. Merchant requires payment",
-      value: "402 Payment Required · 10 CSPR"
+      value: "402 Payment Required · 10 WCSPR"
     },
     {
-      label: "3. AgentPay checks policy",
+      label: "3. AgentPay authorizes mandate",
       value: "Allowlist, cap, budget, approval, idempotency"
     },
     {
-      label: "4. Casper receipt is committed",
-      value: "Approved action maps to Casper ReceiptLedger proof"
+      label: "4. Facilitator settles and proof attaches",
+      value: "Only a verified official x402 settlement unlocks the report"
     }
   ];
 }
@@ -367,13 +358,13 @@ export function buildAutonomousRun(trace = buildAgentTrace()) {
       phase: "Perceive",
       action: "Buyer agent receives task to purchase RWA risk data.",
       tool: "merchant catalog",
-      output: "svc-rwa-risk · 10 CSPR",
+      output: "svc-rwa-risk · 10 WCSPR",
       status: "complete"
     },
     {
       phase: "Request",
-      action: "Agent calls the paid merchant endpoint.",
-      tool: "GET /api/rwa-risk-report",
+      action: "Agent calls the official paid merchant endpoint.",
+      tool: "GET /api/x402/rwa-risk-report",
       output: "HTTP 402 Payment Required",
       status: "complete"
     },
@@ -386,34 +377,34 @@ export function buildAutonomousRun(trace = buildAgentTrace()) {
     },
     {
       phase: "Act",
-      action: isBlocked ? "Unsafe payment is stopped before signing." : "Approved receipt proof unlocks the paid API.",
-      tool: "x-agentpay-receipt",
-      output: proofStep.value || "Waiting for receipt proof",
+      action: isBlocked ? "Unsafe payment is stopped before signing." : "Authorized payment waits for a real x402 signature and facilitator settlement.",
+      tool: "PAYMENT-SIGNATURE",
+      output: proofStep.value || "Waiting for verified settlement",
       status: isBlocked ? "blocked" : isComplete ? "complete" : "ready"
     },
     {
       phase: "Record",
-      action: isBlocked ? "No Casper transaction is produced for blocked spend." : "Approved purchase maps to Casper ReceiptLedger proof.",
-      tool: "Odra ReceiptLedger",
-      output: isBlocked ? "No transaction signed" : testnetProof?.transactions?.receiptWritten?.hash || "Waiting for Testnet proof",
-      status: isBlocked ? "blocked" : "complete"
+      action: isBlocked ? "No Casper transaction is produced for blocked spend." : "Casper proof attaches only after the transaction is confirmed.",
+      tool: "Casper Testnet",
+      output: isBlocked ? "No transaction signed" : "Waiting for Testnet proof",
+      status: isBlocked ? "blocked" : "ready"
     }
   ];
 }
 
 export function merchantPaymentChallenge() {
   return {
-    error: "PAYMENT_REQUIRED",
-    status: 402,
-    message: "RWA Risk Report API costs 10 CSPR per request.",
+    error: "LEGACY_ENDPOINT_RETIRED",
+    status: 410,
+    message: "Use the official Casper x402 resource endpoint for paid RWA reports.",
     serviceId: "svc-rwa-risk",
-    endpoint: "GET /api/rwa-risk-report",
+    endpoint: "GET /api/x402/rwa-risk-report",
     amount: 10,
-    currency: "CSPR",
-    network: "casper-test",
-    paymentRail: "x402-style",
-    requiredHeader: "x-agentpay-receipt",
-    receiptContract: testnetProof?.contracts?.receiptLedger?.packageHash || "ReceiptLedger not loaded",
+    currency: "WCSPR",
+    network: "casper:casper-test",
+    paymentRail: "x402 exact",
+    requiredHeader: "PAYMENT-SIGNATURE",
+    settlementStatus: x402.configured ? "configured" : "not_configured",
     policyGateway: "/mcp",
     proofUrl: testnetProof?.transactions?.receiptWritten?.explorerUrl || null
   };
@@ -423,20 +414,20 @@ export function merchantServicesCatalog() {
   return {
     merchantId: "merchant-rwa-labs",
     merchantName: "RWA Labs",
-    network: "casper-test",
-    paymentRail: "x402-style",
+    network: "casper:casper-test",
+    paymentRail: "x402 exact",
     policyGateway: "/mcp",
     services: [
       {
         id: "svc-rwa-risk",
         name: "RWA Risk Report API",
         description: "Risk score and eligibility summary for agent-purchased RWA invoice data.",
-        endpoint: "GET /api/rwa-risk-report",
+        endpoint: "GET /api/x402/rwa-risk-report",
         price: 10,
-        currency: "CSPR",
-        requiredHeader: "x-agentpay-receipt",
-        status: "active",
-        receiptContract: testnetProof?.contracts?.receiptLedger?.packageHash || "ReceiptLedger not loaded"
+        currency: "WCSPR",
+        requiredHeader: "PAYMENT-SIGNATURE",
+        status: x402.configured ? "active" : "settlement_configuration_required",
+        settlementRail: "official Casper x402"
       }
     ]
   };
@@ -444,64 +435,18 @@ export function merchantServicesCatalog() {
 
 function merchantApiPreview() {
   return {
-    endpoint: "GET /api/rwa-risk-report",
-    status: 402,
+    endpoint: "GET /api/x402/rwa-risk-report",
+    status: x402.configured ? 402 : 503,
     serviceId: "svc-rwa-risk",
-    price: "10 CSPR",
+    price: "10 WCSPR",
     challenge: merchantPaymentChallenge(),
     catalog: "/api/merchant/services"
   };
 }
 
 export function handleRwaRiskReport(request, response) {
-  const receiptHeader = request.headers["x-agentpay-receipt"];
-  const proofHash = testnetProof?.transactions?.receiptWritten?.hash;
-  const sessionReceipt = state.receipts.find((receipt) => receipt.status === "recorded");
-  const validProof = receiptHeader && (
-    receiptHeader === proofHash ||
-    receiptHeader === sessionReceipt?.txHash ||
-    receiptHeader === "agentpay-demo-approved"
-  );
-
-  if (!validProof) {
-    response.writeHead(402, {
-      "content-type": "application/json; charset=utf-8",
-      "x-payment-required": "true",
-      "x-payment-amount": "10",
-      "x-payment-currency": "CSPR",
-      "x-payment-network": "casper-test",
-      "x-payment-service": "svc-rwa-risk"
-    });
-    response.end(JSON.stringify(merchantPaymentChallenge(), null, 2));
-    return;
-  }
-
-  return sendJson(response, {
-    serviceId: "svc-rwa-risk",
-    reportId: "rwa-risk-report-demo",
-    rating: "LOW_RISK",
-    confidence: 0.92,
-    paidBy: "RWA Procurement Agent",
-    paymentReceipt: receiptHeader,
-    receiptProof: testnetProof?.transactions?.receiptWritten?.explorerUrl || null,
-    summary: "Demo RWA invoice is eligible for agent purchase under current buyer policy."
-  });
-}
-
-function blockedPaymentEvent(action, outcome) {
-  return {
-    id: `blocked-${Date.now()}`,
-    agentId: action.agentId,
-    serviceId: action.serviceId,
-    actionType: action.actionType,
-    amount: action.amount,
-    policyHash: state.policies[action.agentId]?.policyHash || "unknown-policy",
-    actionHash: "blocked-before-payment",
-    resultHash: outcome.reasonCode,
-    status: "blocked",
-    txHash: outcome.reasonCode,
-    createdAt: new Date().toISOString()
-  };
+  response.writeHead(410, { "content-type": "application/json; charset=utf-8" });
+  response.end(JSON.stringify(merchantPaymentChallenge(), null, 2));
 }
 
 function mandateInputFromRequest(body = {}) {
@@ -524,6 +469,10 @@ function mandateInputFromRequest(body = {}) {
 
 function withValidation(mandate) {
   return { mandate, canonicalPolicy: canonicalPolicy(mandate), validation: validateMandate(mandate) };
+}
+
+function withGatewayTrace(gatewayRequest) {
+  return { request: gatewayRequest, trace: gatewayTrace(gatewayRequest) };
 }
 
 async function requireMandate(id) {

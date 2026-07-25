@@ -17,3 +17,13 @@ test("mandate store updates mandates and rejects duplicate execution inserts", a
   assert.equal((await store.listExecutions("mandate-1")).length, 1);
   assert.equal(saved.id, "run-1");
 });
+
+test("mandate store updates the same request record through its lifecycle", async () => {
+  const store = new MemoryMandateStore();
+  await store.initialize();
+  await store.saveExecution({ id: "request-1", mandateId: "mandate-1", idempotencyKey: "action-1", status: "authorized" });
+  await store.saveExecution({ id: "request-1", mandateId: "mandate-1", idempotencyKey: "action-1", status: "settlement_pending" });
+
+  assert.equal((await store.getExecution("request-1")).status, "settlement_pending");
+  assert.equal((await store.listExecutions("mandate-1")).length, 1);
+});

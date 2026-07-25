@@ -32,12 +32,12 @@ test("builds a blocked trace without transaction proof", () => {
   assert.equal(trace.find((step) => step.label === "Casper proof").value, "No transaction signed");
 });
 
-test("documents the x402-style paid API flow", () => {
+test("documents the official x402 paid API flow", () => {
   const flow = x402Flow();
 
   assert.equal(flow.length, 4);
   assert.equal(flow.some((step) => step.value.includes("402 Payment Required")), true);
-  assert.equal(flow.some((step) => step.label.includes("Merchant")), true);
+  assert.equal(flow.some((step) => step.value.includes("verified official x402 settlement")), true);
 });
 
 test("builds an autonomous agent run from checkout trace", () => {
@@ -65,14 +65,14 @@ test("marks autonomous run blocked before payment", () => {
   assert.equal(run.find((step) => step.phase === "Record").output, "No transaction signed");
 });
 
-test("builds a merchant payment challenge for the paid RWA API", () => {
+test("marks the legacy merchant endpoint as retired", () => {
   const challenge = merchantPaymentChallenge();
 
-  assert.equal(challenge.status, 402);
+  assert.equal(challenge.status, 410);
   assert.equal(challenge.serviceId, "svc-rwa-risk");
   assert.equal(challenge.amount, 10);
-  assert.equal(challenge.currency, "CSPR");
-  assert.equal(challenge.requiredHeader, "x-agentpay-receipt");
+  assert.equal(challenge.currency, "WCSPR");
+  assert.equal(challenge.requiredHeader, "PAYMENT-SIGNATURE");
 });
 
 test("exposes a merchant services catalog", () => {
@@ -80,24 +80,24 @@ test("exposes a merchant services catalog", () => {
 
   assert.equal(catalog.merchantId, "merchant-rwa-labs");
   assert.equal(catalog.services.length, 1);
-  assert.equal(catalog.services[0].endpoint, "GET /api/rwa-risk-report");
+  assert.equal(catalog.services[0].endpoint, "GET /api/x402/rwa-risk-report");
   assert.equal(catalog.services[0].price, 10);
-  assert.equal(catalog.services[0].currency, "CSPR");
+  assert.equal(catalog.services[0].currency, "WCSPR");
 });
 
-test("merchant RWA API returns HTTP 402 until receipt proof is supplied", async () => {
+test("legacy merchant RWA API never accepts a hard-coded receipt header", async () => {
   const challengeResponse = createMockResponse();
   handleRwaRiskReport({ headers: {} }, challengeResponse);
   const challenge = JSON.parse(challengeResponse.body);
-  assert.equal(challengeResponse.status, 402);
-  assert.equal(challenge.error, "PAYMENT_REQUIRED");
+  assert.equal(challengeResponse.status, 410);
+  assert.equal(challenge.error, "LEGACY_ENDPOINT_RETIRED");
   assert.equal(challenge.serviceId, "svc-rwa-risk");
 
-  const paidResponse = createMockResponse();
-  handleRwaRiskReport({ headers: { "x-agentpay-receipt": "agentpay-demo-approved" } }, paidResponse);
-  const report = JSON.parse(paidResponse.body);
-  assert.equal(paidResponse.status, 200);
-  assert.equal(report.rating, "LOW_RISK");
+  const bypassResponse = createMockResponse();
+  handleRwaRiskReport({ headers: { "x-agentpay-receipt": "agentpay-demo-approved" } }, bypassResponse);
+  const bypass = JSON.parse(bypassResponse.body);
+  assert.equal(bypassResponse.status, 410);
+  assert.equal(bypass.error, "LEGACY_ENDPOINT_RETIRED");
 });
 
 function createMockResponse() {

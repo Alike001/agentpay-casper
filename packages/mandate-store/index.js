@@ -46,8 +46,17 @@ export class JsonMandateStore {
     return mandateId ? executions.filter((item) => item.mandateId === mandateId) : executions;
   }
 
+  async getExecution(id) {
+    return (await this.read()).executions.find((item) => item.id === id) || null;
+  }
+
   async saveExecution(execution) {
     return this.update((data) => {
+      const sameRecord = data.executions.findIndex((item) => item.id === execution.id);
+      if (sameRecord !== -1) {
+        data.executions[sameRecord] = execution;
+        return execution;
+      }
       const existing = data.executions.find((item) => item.idempotencyKey === execution.idempotencyKey);
       if (existing) return existing;
       data.executions.unshift(execution);
@@ -112,7 +121,16 @@ export class MemoryMandateStore {
     return mandateId ? executions.filter((item) => item.mandateId === mandateId) : executions;
   }
 
+  async getExecution(id) {
+    return (await this.read()).executions.find((item) => item.id === id) || null;
+  }
+
   async saveExecution(execution) {
+    const sameRecord = this.data.executions.findIndex((item) => item.id === execution.id);
+    if (sameRecord !== -1) {
+      this.data.executions[sameRecord] = structuredClone(execution);
+      return structuredClone(execution);
+    }
     const existing = this.data.executions.find((item) => item.idempotencyKey === execution.idempotencyKey);
     if (existing) return structuredClone(existing);
     this.data.executions.unshift(structuredClone(execution));
