@@ -6,6 +6,8 @@ const appState = {
   mandateGuardProof: null,
   selectedId: null,
   wallet: null,
+  walletKind: null,
+  casperWallet: null,
   activeSection: "mandates",
   executions: []
 };
@@ -36,6 +38,7 @@ document.addEventListener("DOMContentLoaded", boot);
 async function boot() {
   window.lucide?.createIcons();
   bindEvents();
+  bindCasperWallet();
   bindCsprClick();
   await refreshProductState();
 }
@@ -67,6 +70,7 @@ function bindEvents() {
 }
 
 function bindCsprClick() {
+  if (window.AgentPayWalletAdapter?.directProvider()) return;
   if (!appState.config.csprClickAppId) return;
   window.addEventListener("csprclick:loaded", async () => {
     for (const eventName of ["csprclick:signed_in", "csprclick:switched_account"]) {
@@ -86,9 +90,42 @@ function bindCsprClick() {
   }
 }
 
+function bindCasperWallet() {
+  let attempts = 0;
+  const connect = async () => {
+    const provider = window.AgentPayWalletAdapter?.directProvider();
+    if (!provider) {
+      attempts += 1;
+      if (attempts < 12) window.setTimeout(() => { void connect(); }, 500);
+      return;
+    }
+    appState.casperWallet = provider;
+    for (const eventName of ["Connected", "ActiveKeyChanged", "Unlocked"]) {
+      window.addEventListener(window.AgentPayWalletAdapter.directEvent(eventName), updateDirectWallet);
+    }
+    for (const eventName of ["Disconnected", "Locked"]) {
+      window.addEventListener(window.AgentPayWalletAdapter.directEvent(eventName), clearWallet);
+    }
+    try {
+      if (await provider.isConnected()) await updateDirectWallet();
+    } catch {
+      // A locked extension is not an application error; the wallet controls its own unlock flow.
+    }
+  };
+  void connect();
+}
+
 async function connectWallet() {
   if (appState.wallet) {
-    window.csprclick?.switchAccount();
+    if (appState.walletKind === "casper-wallet") await appState.casperWallet?.requestSwitchAccount();
+    else window.csprclick?.switchAccount();
+    return;
+  }
+  const provider = appState.casperWallet || window.AgentPayWalletAdapter?.directProvider();
+  if (provider) {
+    appState.casperWallet = provider;
+    const connected = await provider.requestConnection();
+    if (connected) await updateDirectWallet();
     return;
   }
   const localDevelopment = ["localhost", "127.0.0.1"].includes(location.hostname);
@@ -106,22 +143,37 @@ async function connectWallet() {
 async function updateActiveWallet() {
   const account = await window.csprclick?.getActiveAccountAsync({ withBalance: true });
   if (!account?.public_key) return;
+  setActiveWallet(account.public_key, "csprclick", account);
+}
+
+async function updateDirectWallet() {
+  const provider = appState.casperWallet || window.AgentPayWalletAdapter?.directProvider();
+  if (!provider) return;
+  const publicKey = await provider.getActivePublicKey();
+  if (!publicKey) return;
+  appState.casperWallet = provider;
+  setActiveWallet(publicKey, "casper-wallet", { public_key: publicKey });
+}
+
+function setActiveWallet(publicKey, kind, account) {
   appState.wallet = account;
+  appState.walletKind = kind;
   elements.walletButton.classList.remove("secondary");
-  elements.walletButton.querySelector("span").textContent = shortHash(account.public_key);
+  elements.walletButton.querySelector("span").textContent = shortHash(publicKey);
   elements.walletRequirement.classList.add("connected");
   elements.walletRequirement.querySelector("strong").textContent = "Owner wallet connected";
-  elements.walletRequirement.querySelector("span").textContent = shortHash(account.public_key);
+  elements.walletRequirement.querySelector("span").textContent = `${shortHash(publicKey)} · ${kind === "casper-wallet" ? "Casper Wallet" : "CSPR.click"}`;
   renderSelectedMandate();
 }
 
 function clearWallet() {
   appState.wallet = null;
+  appState.walletKind = null;
   elements.walletButton.classList.add("secondary");
   elements.walletButton.querySelector("span").textContent = "Connect wallet";
   elements.walletRequirement.classList.remove("connected");
   elements.walletRequirement.querySelector("strong").textContent = "Owner wallet";
-  elements.walletRequirement.querySelector("span").textContent = "Connect CSPR.click before compiling authority.";
+  elements.walletRequirement.querySelector("span").textContent = "Connect Casper Wallet or CSPR.click before compiling authority.";
 }
 
 async function refreshProductState() {
@@ -498,17 +550,7 @@ async function activateSelectedMandate() {
   }
   setSyncState("Building transaction...");
   try {
-    const built = await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/transactions/activate`, {
-      ownerPublicKey: appState.wallet.public_key
-    });
-    const result = await window.csprclick.send(built.transaction, built.signingPublicKey, (status) => setSyncState(`Casper: ${status}`));
-    if (!result || result.cancelled || result.error) throw new Error(result?.error || "Wallet approval was cancelled.");
-    const transactionHash = result.deployHash || result.transactionHash;
-    if (!transactionHash) throw new Error("CSPR.click did not return a transaction hash.");
-    await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/activation-submissions`, {
-      transactionHash,
-      ownerPublicKey: appState.wallet.public_key
-    });
+    await submitMandateOperation(record, "activate");
     await refreshProductState();
     showToast("Activation submitted to Casper. AgentPay is waiting for verified confirmation.");
   } catch (error) {
@@ -533,14 +575,7 @@ async function revokeSelectedMandate() {
 
   setSyncState("Building revocation...");
   try {
-    const built = await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/transactions/revoke`, {
-      ownerPublicKey: appState.wallet.public_key
-    });
-    const result = await window.csprclick.send(built.transaction, built.signingPublicKey, (status) => setSyncState(`Casper: ${status}`));
-    if (!result || result.cancelled || result.error) throw new Error(result?.error || "Wallet approval was cancelled.");
-    const transactionHash = result.deployHash || result.transactionHash;
-    if (!transactionHash) throw new Error("CSPR.click did not return a transaction hash.");
-    await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/revocation-submissions`, { transactionHash });
+    await submitMandateOperation(record, "revoke");
     await refreshProductState();
     showToast("Revocation submitted to Casper. AgentPay is waiting for verified confirmation.");
   } catch (error) {
@@ -548,6 +583,31 @@ async function revokeSelectedMandate() {
   } finally {
     setSyncState("Workbench ready");
   }
+}
+
+async function submitMandateOperation(record, operation) {
+  const mandateId = encodeURIComponent(record.mandate.id);
+  const built = await postJson(`/api/mandates/${mandateId}/transactions/${operation}`, {
+    ownerPublicKey: appState.wallet.public_key
+  });
+  if (appState.walletKind === "casper-wallet") {
+    const signed = await appState.casperWallet.sign(JSON.stringify(built.transaction), built.signingPublicKey);
+    if (!signed || signed.cancelled || !signed.signature) throw new Error("Casper Wallet approval was cancelled.");
+    await postJson(`/api/mandates/${mandateId}/wallet-submissions/${operation}`, {
+      ownerPublicKey: appState.wallet.public_key,
+      signature: Array.from(signed.signature)
+    });
+    return;
+  }
+  const signed = await window.csprclick.send(built.transaction, built.signingPublicKey, (status) => setSyncState(`Casper: ${status}`));
+  if (!signed || signed.cancelled || signed.error) throw new Error(signed?.error || "CSPR.click approval was cancelled.");
+  const transactionHash = signed.deployHash || signed.transactionHash;
+  if (!transactionHash) throw new Error("CSPR.click did not return a transaction hash.");
+  const route = operation === "activate" ? "activation-submissions" : "revocation-submissions";
+  await postJson(`/api/mandates/${mandateId}/${route}`, {
+    transactionHash,
+    ownerPublicKey: appState.wallet.public_key
+  });
 }
 
 function openActionDialog() {
@@ -594,7 +654,7 @@ async function copyPolicy() {
 
 function requireWallet() {
   if (appState.wallet?.public_key) return true;
-  showToast("Connect the owner wallet with CSPR.click first.");
+  showToast("Connect an owner wallet first.");
   return false;
 }
 

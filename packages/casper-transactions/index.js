@@ -1,7 +1,7 @@
 import casperSdk from "casper-js-sdk";
 import { validateMandate } from "../mandate-engine/index.js";
 
-const { Args, CLValue, ContractCallBuilder, Key, PublicKey } = casperSdk;
+const { Args, CLValue, ContractCallBuilder, HttpHandler, Key, PublicKey, RpcClient, Transaction } = casperSdk;
 
 export function buildCreateMandateTransaction(mandate, options = {}) {
   const packageHash = normalizePackageHash(options.packageHash || process.env.MANDATE_GUARD_PACKAGE_HASH);
@@ -72,8 +72,38 @@ export function buildRevokeMandateTransaction(mandate, options = {}) {
   };
 }
 
+export async function submitCasperWalletSignature(transactionJson, signingPublicKey, signature, options = {}) {
+  if (!transactionJson || typeof transactionJson !== "object") {
+    throw new TypeError("A stored Casper transaction is required for wallet submission.");
+  }
+  if (!/^(01|02|03)[a-f0-9]{64,}$/i.test(String(signingPublicKey || ""))) {
+    throw new TypeError("A valid Casper signing public key is required.");
+  }
+
+  const transaction = Transaction.fromJSON(transactionJson);
+  transaction.setSignature(toSignatureBytes(signature), PublicKey.fromHex(signingPublicKey));
+  if (!transaction.validate()) throw new TypeError("Casper Wallet signature did not validate against the stored transaction.");
+
+  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://rpc.testnet.casper.network/rpc");
+  const client = new RpcClient(new HttpHandler(nodeUrl));
+  const submitted = await client.putTransaction(transaction);
+  if (!submitted?.transactionHash) throw new Error("Casper node did not return a transaction hash.");
+  return { transactionHash: submitted.transactionHash, nodeUrl };
+}
+
 function normalizePackageHash(value) {
   const hash = String(value || "").replace(/^(hash-|contract-package-)/, "");
   if (!/^[a-f0-9]{64}$/.test(hash)) throw new TypeError("MANDATE_GUARD_PACKAGE_HASH must be a 64-character Casper package hash.");
   return hash;
+}
+
+function toSignatureBytes(value) {
+  if (Array.isArray(value) && value.every((item) => Number.isInteger(item) && item >= 0 && item <= 255)) {
+    return Uint8Array.from(value);
+  }
+  const hex = String(value || "").replace(/^0x/, "");
+  if (!hex || hex.length % 2 || !/^[a-f0-9]+$/i.test(hex)) {
+    throw new TypeError("Casper Wallet signature must be a byte array or even-length hexadecimal string.");
+  }
+  return Uint8Array.from(hex.match(/.{1,2}/g).map((byte) => Number.parseInt(byte, 16)));
 }

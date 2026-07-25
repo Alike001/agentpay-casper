@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/workbench.css">
     <script src="/runtime-config.js"></script>
     <script defer src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script defer src="/wallet-adapter.js"></script>
     <script defer src="/workbench.js"></script>
   </head>
   <body>
@@ -182,7 +183,7 @@
       <aside id="create-drawer" class="create-drawer" aria-label="Create spending mandate" aria-hidden="true">
         <header><div><span>New authority</span><h2>Create spending mandate</h2></div><button id="close-create" class="icon-command" type="button" title="Close" aria-label="Close"><i data-lucide="x"></i></button></header>
         <form id="mandate-form">
-          <div class="wallet-requirement" id="wallet-requirement"><i data-lucide="wallet"></i><div><strong>Owner wallet</strong><span>Connect CSPR.click before compiling authority.</span></div></div>
+          <div class="wallet-requirement" id="wallet-requirement"><i data-lucide="wallet"></i><div><strong>Owner wallet</strong><span>Connect Casper Wallet or CSPR.click before compiling authority.</span></div></div>
           <label class="form-field full"><span>Mandate intent</span><textarea id="intent-input" rows="4" required>Allow the RWA procurement agent to buy only approved risk reports, up to 10 WCSPR per request and 50 WCSPR per day, for seven days.</textarea></label>
           <label class="form-field full"><span>Agent account hash</span><input id="agent-account-input" required value="account-hash-3975323bebe4fc7eed16f29262ff7756fb745a00aa3a08f5c36a945bf924b2cb"></label>
           <fieldset>

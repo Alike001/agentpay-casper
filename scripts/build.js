@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 const required = [
   "apps/web/index.html",
   "apps/web/dashboard.html",
+  "apps/web/wallet-adapter.js",
   "apps/web/styles.css",
   "apps/web/app.js",
   "apps/api/server.js",

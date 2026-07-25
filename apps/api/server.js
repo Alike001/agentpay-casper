@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { compileMandateIntent, csprToMotes } from "../../packages/ai-policy-compiler/index.js";
 import { createCasperX402Middleware } from "../../packages/casper-x402/index.js";
-import { buildCreateMandateTransaction, buildRevokeMandateTransaction } from "../../packages/casper-transactions/index.js";
+import { buildCreateMandateTransaction, buildRevokeMandateTransaction, submitCasperWalletSignature } from "../../packages/casper-transactions/index.js";
 import { DEFAULT_MANDATE_GUARD_PACKAGE_HASH, loadLocalEnvironment, publicRuntimeConfig } from "../../packages/config/index.js";
 import {
   canonicalPolicy,
@@ -165,7 +165,7 @@ app.post("/api/mandates/:mandateId/transactions/activate", asyncRoute(async (req
   if (request.body.ownerPublicKey && request.body.ownerPublicKey !== mandate.ownerPublicKey) {
     throw httpError(403, "Connected wallet does not own this mandate draft.");
   }
-  response.json(buildCreateMandateTransaction(mandate));
+  response.json(await rememberPendingWalletTransaction(mandate, "activate"));
 }));
 
 app.post("/api/mandates/:mandateId/transactions/revoke", asyncRoute(async (request, response) => {
@@ -177,7 +177,32 @@ app.post("/api/mandates/:mandateId/transactions/revoke", asyncRoute(async (reque
   if (request.body.ownerPublicKey && request.body.ownerPublicKey !== mandate.ownerPublicKey) {
     throw httpError(403, "Connected wallet does not own this mandate.");
   }
-  response.json(buildRevokeMandateTransaction(mandate));
+  response.json(await rememberPendingWalletTransaction(mandate, "revoke"));
+}));
+
+app.post("/api/mandates/:mandateId/wallet-submissions/:operation", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const mandate = await requireMandate(request.params.mandateId);
+  const operation = String(request.params.operation);
+  if (!["activate", "revoke"].includes(operation)) throw httpError(404, "Unknown wallet operation.");
+  if (operation === "revoke" && mandate.status !== MandateStatus.ACTIVE) {
+    throw httpError(409, "Only a confirmed active mandate can be revoked.");
+  }
+  if (request.body.ownerPublicKey && request.body.ownerPublicKey !== mandate.ownerPublicKey) {
+    throw httpError(403, "Connected wallet does not own this mandate.");
+  }
+  const pending = mandate.pendingWalletTransaction;
+  if (!pending || pending.operation !== operation || !pending.transaction || !pending.signingPublicKey) {
+    throw httpError(409, "Build a fresh wallet transaction before submitting its signature.");
+  }
+  const submitted = await submitCasperWalletSignature(pending.transaction, pending.signingPublicKey, request.body.signature);
+  const updated = recordWalletSubmission(mandate, operation, submitted.transactionHash);
+  await productStore.saveMandate(updated);
+  response.status(202).json({
+    mandate: withValidation(updated),
+    transactionHash: submitted.transactionHash,
+    message: `${operation === "activate" ? "Activation" : "Revocation"} submitted. AgentPay is waiting for Casper confirmation.`
+  });
 }));
 
 app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (request, response) => {
@@ -473,6 +498,41 @@ function withValidation(mandate) {
 
 function withGatewayTrace(gatewayRequest) {
   return { request: gatewayRequest, trace: gatewayTrace(gatewayRequest) };
+}
+
+async function rememberPendingWalletTransaction(mandate, operation) {
+  const built = operation === "activate"
+    ? buildCreateMandateTransaction(mandate)
+    : buildRevokeMandateTransaction(mandate);
+  const updated = {
+    ...mandate,
+    pendingWalletTransaction: {
+      operation,
+      transaction: built.transaction,
+      signingPublicKey: built.signingPublicKey,
+      entryPoint: built.entryPoint,
+      createdAt: new Date().toISOString()
+    },
+    updatedAt: new Date().toISOString()
+  };
+  await productStore.saveMandate(updated);
+  return built;
+}
+
+function recordWalletSubmission(mandate, operation, transactionHash) {
+  const submittedAt = new Date().toISOString();
+  const updated = {
+    ...mandate,
+    pendingWalletTransaction: null,
+    updatedAt: submittedAt
+  };
+  if (operation === "activate") {
+    updated.status = MandateStatus.PENDING;
+    updated.activation = { status: "submitted", transactionHash, submittedAt };
+  } else {
+    updated.revocation = { status: "submitted", transactionHash, submittedAt };
+  }
+  return updated;
 }
 
 async function requireMandate(id) {
