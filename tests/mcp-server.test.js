@@ -23,10 +23,11 @@ test("official MCP server exposes typed mandate tools", async () => {
   await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   const tools = await client.listTools();
-  assert.equal(tools.tools.some((tool) => tool.name === "agentpay_simulate_action"), true);
+  assert.equal(tools.tools.some((tool) => tool.name === "agentpay_authorize_paid_tool"), true);
+  assert.equal(tools.tools.some((tool) => tool.name === "agentpay_get_request"), true);
 
   const result = await client.callTool({
-    name: "agentpay_simulate_action",
+    name: "agentpay_authorize_paid_tool",
     arguments: {
       mandateId: draft.id,
       serviceId: "svc-rwa-risk",
@@ -34,7 +35,33 @@ test("official MCP server exposes typed mandate tools", async () => {
       idempotencyKey: "mcp-action-1"
     }
   });
-  assert.equal(result.structuredContent.decision.reasonCode, "ALLOWED");
+  assert.equal(result.structuredContent.request.decision.reasonCode, "ALLOWED");
+  assert.equal(result.structuredContent.request.status, "authorized");
+  assert.equal((await store.listExecutions(draft.id)).length, 1);
+
+  const blocked = await client.callTool({
+    name: "agentpay_authorize_paid_tool",
+    arguments: {
+      mandateId: draft.id,
+      serviceId: "svc-rwa-risk",
+      amountMotes: (100n * CSPR_MOTES).toString(),
+      idempotencyKey: "mcp-action-over-limit"
+    }
+  });
+  assert.equal(blocked.structuredContent.request.status, "blocked");
+  assert.equal(blocked.structuredContent.request.decision.reasonCode, "AMOUNT_OVER_LIMIT");
+
+  const replay = await client.callTool({
+    name: "agentpay_authorize_paid_tool",
+    arguments: {
+      mandateId: draft.id,
+      serviceId: "svc-rwa-risk",
+      amountMotes: (10n * CSPR_MOTES).toString(),
+      idempotencyKey: "mcp-action-1"
+    }
+  });
+  assert.equal(replay.structuredContent.request.status, "blocked");
+  assert.equal(replay.structuredContent.request.decision.reasonCode, "DUPLICATE_ACTION");
 
   await client.close();
   await server.close();

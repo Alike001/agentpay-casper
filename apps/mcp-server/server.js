@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import { evaluateMandate, validateMandate } from "../../packages/mandate-engine/index.js";
+import { validateMandate } from "../../packages/mandate-engine/index.js";
+import { createGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 
 export function createAgentPayMcpServer({ store, services }) {
   const server = new McpServer({
@@ -29,8 +30,8 @@ export function createAgentPayMcpServer({ store, services }) {
     inputSchema: {}
   }, async () => mcpResult({ services }));
 
-  server.registerTool("agentpay_simulate_action", {
-    description: "Deterministically evaluate a proposed paid API action. This never signs, settles, or changes budget.",
+  server.registerTool("agentpay_authorize_paid_tool", {
+    description: "Create a durable AgentPay authorization request for a paid MCP tool. This never signs, settles, delivers a service response, or changes budget.",
     inputSchema: {
       mandateId: z.string().min(1),
       serviceId: z.string().min(1),
@@ -41,23 +42,40 @@ export function createAgentPayMcpServer({ store, services }) {
   }, async ({ mandateId, ...action }) => {
     const mandate = await requireMandate(store, mandateId);
     const seenIdempotencyKeys = await store.seenIdempotencyKeys(mandateId);
-    const decision = evaluateMandate(mandate, {
+    const request = createGatewayRequest({
+      mandate,
+      source: "mcp",
+      seenIdempotencyKeys,
+      action: {
       ...action,
       agentId: mandate.agentId,
       actionType: "paid_service_call"
-    }, { seenIdempotencyKeys });
-    return mcpResult({ mandateId, decision });
+      }
+    });
+    await store.saveExecution(request);
+    return mcpResult({ mandateId, request, trace: gatewayTrace(request) });
   });
 
-  server.registerTool("agentpay_list_executions", {
-    description: "List policy decisions and settlement evidence attached to a mandate.",
+  server.registerTool("agentpay_list_requests", {
+    description: "List durable paid-tool authorization requests, their decision codes, and any attached settlement evidence.",
     inputSchema: {
       mandateId: z.string().min(1)
     }
-  }, async ({ mandateId }) => mcpResult({
-    mandateId,
-    executions: await store.listExecutions(mandateId)
-  }));
+  }, async ({ mandateId }) => {
+    const requests = await store.listExecutions(mandateId);
+    return mcpResult({ mandateId, requests: requests.map((request) => ({ request, trace: gatewayTrace(request) })) });
+  });
+
+  server.registerTool("agentpay_get_request", {
+    description: "Inspect one AgentPay paid-tool request, including deterministic decision, settlement state, and Casper proof state.",
+    inputSchema: {
+      requestId: z.string().min(1).describe("AgentPay gateway request identifier")
+    }
+  }, async ({ requestId }) => {
+    const request = await store.getExecution(requestId);
+    if (!request) return mcpError(`Gateway request not found: ${requestId}`);
+    return mcpResult({ request, trace: gatewayTrace(request) });
+  });
 
   return server;
 }
@@ -88,5 +106,12 @@ function mcpResult(structuredContent) {
   return {
     content: [{ type: "text", text: JSON.stringify(structuredContent, null, 2) }],
     structuredContent
+  };
+}
+
+function mcpError(message) {
+  return {
+    content: [{ type: "text", text: message }],
+    isError: true
   };
 }

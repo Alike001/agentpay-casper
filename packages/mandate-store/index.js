@@ -57,8 +57,6 @@ export class JsonMandateStore {
         data.executions[sameRecord] = execution;
         return execution;
       }
-      const existing = data.executions.find((item) => item.idempotencyKey === execution.idempotencyKey);
-      if (existing) return existing;
       data.executions.unshift(execution);
       return execution;
     });
@@ -131,8 +129,6 @@ export class MemoryMandateStore {
       this.data.executions[sameRecord] = structuredClone(execution);
       return structuredClone(execution);
     }
-    const existing = this.data.executions.find((item) => item.idempotencyKey === execution.idempotencyKey);
-    if (existing) return structuredClone(existing);
     this.data.executions.unshift(structuredClone(execution));
     return execution;
   }
