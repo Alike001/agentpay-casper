@@ -46,6 +46,32 @@ export function buildCreateMandateTransaction(mandate, options = {}) {
   };
 }
 
+export function buildRevokeMandateTransaction(mandate, options = {}) {
+  const packageHash = normalizePackageHash(options.packageHash || process.env.MANDATE_GUARD_PACKAGE_HASH);
+  if (!mandate?.id) throw new TypeError("A mandate ID is required to build a revocation transaction.");
+  if (!mandate?.ownerPublicKey || mandate.ownerPublicKey === "wallet-not-connected") {
+    throw new TypeError("A connected owner wallet is required to revoke a mandate.");
+  }
+
+  const transaction = new ContractCallBuilder()
+    .from(PublicKey.fromHex(mandate.ownerPublicKey))
+    .byPackageHash(packageHash)
+    .entryPoint("revoke_mandate")
+    .runtimeArgs(Args.fromMap({ mandate_id: CLValue.newCLString(mandate.id) }))
+    .chainName("casper-test")
+    .payment(Number(options.paymentMotes || process.env.MANDATE_CALL_PAYMENT_MOTES || 5_000_000_000))
+    .build();
+
+  return {
+    transaction: transaction.toJSON(),
+    signingPublicKey: mandate.ownerPublicKey,
+    network: "casper-test",
+    contractPackageHash: `hash-${packageHash}`,
+    entryPoint: "revoke_mandate",
+    mandateId: mandate.id
+  };
+}
+
 function normalizePackageHash(value) {
   const hash = String(value || "").replace(/^(hash-|contract-package-)/, "");
   if (!/^[a-f0-9]{64}$/.test(hash)) throw new TypeError("MANDATE_GUARD_PACKAGE_HASH must be a 64-character Casper package hash.");

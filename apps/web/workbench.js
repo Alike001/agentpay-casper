@@ -51,7 +51,7 @@ function bindEvents() {
   $("#manual-draft").addEventListener("click", createManualMandate);
   elements.mandateSearch.addEventListener("input", renderMandateList);
   $("#activate-mandate").addEventListener("click", activateSelectedMandate);
-  $("#revoke-mandate").addEventListener("click", () => showToast("Revocation transaction signing is the next wallet action to enable."));
+  $("#revoke-mandate").addEventListener("click", revokeSelectedMandate);
   $("#run-policy-check").addEventListener("click", openActionDialog);
   $("#close-action").addEventListener("click", closeActionDialog);
   $("#cancel-action").addEventListener("click", closeActionDialog);
@@ -258,6 +258,9 @@ function renderSelectedMandate() {
   $("#activation-transaction").innerHTML = transactionEvidence(mandate.activation);
   $("#activate-mandate").disabled = mandate.status !== "draft" || !validation.valid || !guardConfigured;
   $("#activate-mandate").title = guardConfigured ? "Sign the MandateGuard transaction with CSPR.click" : "MandateGuard Testnet deployment is required";
+  const canRevoke = mandate.status === "active" && !mandate.revocation?.transactionHash;
+  $("#revoke-mandate").disabled = !canRevoke;
+  $("#revoke-mandate").title = canRevoke ? "Revoke this mandate with the owner wallet" : "Only confirmed active mandates without a pending revocation can be revoked";
   renderReceiptProof();
   renderExecutions();
   renderLatestExecution();
@@ -508,6 +511,38 @@ async function activateSelectedMandate() {
     });
     await refreshProductState();
     showToast("Activation submitted to Casper. AgentPay is waiting for verified confirmation.");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    setSyncState("Workbench ready");
+  }
+}
+
+async function revokeSelectedMandate() {
+  const record = selectedRecord();
+  if (!record || !requireWallet()) return;
+  if (record.mandate.status !== "active") {
+    showToast("Only a confirmed active mandate can be revoked.");
+    return;
+  }
+  if (appState.wallet.public_key !== record.mandate.ownerPublicKey) {
+    showToast("Switch to the wallet that owns this mandate.");
+    return;
+  }
+  if (!window.confirm(`Revoke ${record.mandate.name}? This creates a Casper Testnet transaction.`)) return;
+
+  setSyncState("Building revocation...");
+  try {
+    const built = await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/transactions/revoke`, {
+      ownerPublicKey: appState.wallet.public_key
+    });
+    const result = await window.csprclick.send(built.transaction, built.signingPublicKey, (status) => setSyncState(`Casper: ${status}`));
+    if (!result || result.cancelled || result.error) throw new Error(result?.error || "Wallet approval was cancelled.");
+    const transactionHash = result.deployHash || result.transactionHash;
+    if (!transactionHash) throw new Error("CSPR.click did not return a transaction hash.");
+    await postJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/revocation-submissions`, { transactionHash });
+    await refreshProductState();
+    showToast("Revocation submitted to Casper. AgentPay is waiting for verified confirmation.");
   } catch (error) {
     showToast(error.message);
   } finally {

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { compileMandateIntent, csprToMotes } from "../../packages/ai-policy-compiler/index.js";
 import { createCasperX402Middleware } from "../../packages/casper-x402/index.js";
-import { buildCreateMandateTransaction } from "../../packages/casper-transactions/index.js";
+import { buildCreateMandateTransaction, buildRevokeMandateTransaction } from "../../packages/casper-transactions/index.js";
 import { DEFAULT_MANDATE_GUARD_PACKAGE_HASH, loadLocalEnvironment, publicRuntimeConfig } from "../../packages/config/index.js";
 import {
   canonicalPolicy,
@@ -168,6 +168,41 @@ app.post("/api/mandates/:mandateId/transactions/activate", asyncRoute(async (req
     throw httpError(403, "Connected wallet does not own this mandate draft.");
   }
   response.json(buildCreateMandateTransaction(mandate));
+}));
+
+app.post("/api/mandates/:mandateId/transactions/revoke", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const mandate = await requireMandate(request.params.mandateId);
+  if (mandate.status !== MandateStatus.ACTIVE) {
+    throw httpError(409, "Only a confirmed active mandate can be revoked.");
+  }
+  if (request.body.ownerPublicKey && request.body.ownerPublicKey !== mandate.ownerPublicKey) {
+    throw httpError(403, "Connected wallet does not own this mandate.");
+  }
+  response.json(buildRevokeMandateTransaction(mandate));
+}));
+
+app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const mandate = await requireMandate(request.params.mandateId);
+  if (mandate.status !== MandateStatus.ACTIVE) {
+    throw httpError(409, "Only a confirmed active mandate can be revoked.");
+  }
+  if (!request.body.transactionHash) throw httpError(400, "A Casper transaction hash is required.");
+  const pending = {
+    ...mandate,
+    revocation: {
+      status: "submitted",
+      transactionHash: String(request.body.transactionHash),
+      submittedAt: new Date().toISOString()
+    },
+    updatedAt: new Date().toISOString()
+  };
+  await productStore.saveMandate(pending);
+  response.status(202).json({
+    mandate: withValidation(pending),
+    message: "Revocation submitted. Authority remains active until Casper confirmation is verified."
+  });
 }));
 
 app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, response) => {

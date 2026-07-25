@@ -22,7 +22,8 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 4. The deterministic mandate engine validates services, limits, budget, approval threshold, expiry, network, and canonical policy hash.
 5. The owner reviews and signs an unsigned `MandateGuard::create_mandate` transaction client-side.
 6. Agent actions are evaluated against the active mandate before signing or settlement.
-7. Approved x402 service calls and Casper receipts remain attached to the mandate as evidence.
+7. The owner can sign an unsigned `MandateGuard::revoke_mandate` transaction to remove authority.
+8. Approved x402 service calls and Casper receipts remain attached to the mandate as evidence.
 
 The backend never receives a wallet private key. An LLM cannot sign, activate a mandate, or override an allow/block decision.
 
@@ -135,6 +136,8 @@ CSPR_CLOUD_API_KEY
 | `POST` | `/api/mandates/:id/evaluate` | Deterministically evaluate an agent action |
 | `POST` | `/api/mandates/:id/transactions/activate` | Build an unsigned Casper transaction |
 | `POST` | `/api/mandates/:id/activation-submissions` | Record a submitted transaction as pending |
+| `POST` | `/api/mandates/:id/transactions/revoke` | Build an unsigned owner revocation transaction |
+| `POST` | `/api/mandates/:id/revocation-submissions` | Record a submitted revocation as pending |
 | `GET` | `/api/mandates/:id/executions` | Read mandate decisions and evidence |
 | `POST` | `/mcp` | Official MCP Streamable HTTP endpoint |
 | `GET` | `/api/x402/rwa-risk-report` | Official Casper x402 protected resource |
