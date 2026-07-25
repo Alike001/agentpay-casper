@@ -195,7 +195,15 @@ app.post("/api/mandates/:mandateId/wallet-submissions/:operation", asyncRoute(as
   if (!pending || pending.operation !== operation || !pending.transaction || !pending.signingPublicKey) {
     throw httpError(409, "Build a fresh wallet transaction before submitting its signature.");
   }
-  const submitted = await submitCasperWalletSignature(pending.transaction, pending.signingPublicKey, request.body.signature);
+  let submitted;
+  try {
+    submitted = await submitCasperWalletSignature(pending.transaction, pending.signingPublicKey, request.body.signature);
+  } catch (error) {
+    console.error("Casper Wallet submission failed", { operation, mandateId: mandate.id, error });
+    const statusCode = error instanceof TypeError ? 400 : 502;
+    const prefix = statusCode === 400 ? "Wallet signature was rejected" : "Casper RPC submission failed";
+    throw httpError(statusCode, `${prefix}: ${String(error?.message || "unknown error")}`);
+  }
   const updated = recordWalletSubmission(mandate, operation, submitted.transactionHash);
   await productStore.saveMandate(updated);
   response.status(202).json({
@@ -515,9 +523,14 @@ function withGatewayTrace(gatewayRequest) {
 }
 
 async function rememberPendingWalletTransaction(mandate, operation) {
-  const built = operation === "activate"
-    ? buildCreateMandateTransaction(mandate)
-    : buildRevokeMandateTransaction(mandate);
+  let built;
+  try {
+    built = operation === "activate"
+      ? buildCreateMandateTransaction(mandate)
+      : buildRevokeMandateTransaction(mandate);
+  } catch (error) {
+    throw httpError(422, `Unable to build the MandateGuard transaction: ${String(error?.message || "unknown error")}`);
+  }
   const updated = {
     ...mandate,
     pendingWalletTransaction: {

@@ -305,7 +305,8 @@ function renderSelectedMandate() {
   }).join("");
 
   const guardConfigured = Boolean(appState.config.mandateGuardPackageHash);
-  $("revocation-transaction").innerHTML = transactionEvidence(mandate.revocation);
+  const revocationTransaction = $("#revocation-transaction");
+  if (revocationTransaction) revocationTransaction.innerHTML = transactionEvidence(mandate.revocation);
   $("#guard-state").textContent = guardConfigured ? "Configured" : "Deployment required";
   $("#guard-state").className = `integration-state ${guardConfigured ? "live" : ""}`;
   $("#guard-package").textContent = appState.config.mandateGuardPackageHash || "Not deployed";
@@ -317,9 +318,12 @@ function renderSelectedMandate() {
   const pendingActivation = mandate.status === "pending" && mandate.activation?.transactionHash;
   const pendingRevocation = mandate.status === "active" && mandate.revocation?.transactionHash && mandate.revocation?.status !== "confirmed";
   const canConfirm = Boolean(pendingActivation || pendingRevocation);
-  $("confirm-mandate").hidden = !canConfirm;
-  $("confirm-mandate").disabled = !canConfirm;
-  $("confirm-mandate").title = canConfirm ? "Verify the submitted transaction on Casper Testnet" : "";
+  const confirmMandate = $("#confirm-mandate");
+  if (confirmMandate) {
+    confirmMandate.hidden = !canConfirm;
+    confirmMandate.disabled = !canConfirm;
+    confirmMandate.title = canConfirm ? "Verify the submitted transaction on Casper Testnet" : "";
+  }
   $("#revoke-mandate").disabled = !canRevoke;
   $("#revoke-mandate").title = canRevoke ? "Revoke this mandate with the owner wallet" : "Only confirmed active mandates without a pending revocation can be revoked";
   renderReceiptProof();
