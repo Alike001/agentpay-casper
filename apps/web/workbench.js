@@ -7,6 +7,7 @@ const appState = {
   selectedId: null,
   wallet: null,
   walletKind: null,
+  authToken: sessionStorage.getItem("agentpay.authToken"),
   casperWallet: null,
   walletDisconnected: sessionStorage.getItem("agentpay.walletDisconnected") === "true",
   activeSection: "mandates",
@@ -169,12 +170,15 @@ function setActiveWallet(publicKey, kind, account) {
   elements.walletRequirement.querySelector("strong").textContent = "Owner wallet connected";
   elements.walletRequirement.querySelector("span").textContent = `${shortHash(publicKey)} · ${kind === "casper-wallet" ? "Casper Wallet" : "CSPR.click"}`;
   $("#disconnect-wallet").hidden = false;
+  void authenticateWallet();
   renderSelectedMandate();
 }
 
 function clearWallet() {
   appState.wallet = null;
   appState.walletKind = null;
+  appState.authToken = null;
+  sessionStorage.removeItem("agentpay.authToken");
   elements.walletButton.classList.add("secondary");
   elements.walletButton.querySelector("span").textContent = "Connect wallet";
   elements.walletRequirement.classList.remove("connected");
@@ -193,12 +197,12 @@ function disconnectWallet() {
 async function refreshProductState() {
   setSyncState("Refreshing...");
   try {
-    const [config, mandateData, catalog, legacyState] = await Promise.all([
+    const [config, catalog, legacyState] = await Promise.all([
       getJson("/api/config"),
-      getJson("/api/mandates"),
       getJson("/api/merchant/services"),
       getJson("/api/state")
     ]);
+    const mandateData = appState.authToken ? await getJson("/api/mandates") : { mandates: [] };
     appState.config = config;
     appState.mandates = mandateData.mandates || [];
     appState.services = catalog.services || [];
@@ -215,6 +219,40 @@ async function refreshProductState() {
   } catch (error) {
     setSyncState("Connection error");
     showToast(error.message);
+  }
+}
+
+async function authenticateWallet() {
+  if (!appState.wallet?.public_key || appState.walletKind !== "casper-wallet") return;
+  const provider = appState.casperWallet || window.AgentPayWalletAdapter?.directProvider();
+  if (!provider?.signMessage) {
+    showToast("This Casper Wallet account does not support message signing for AgentPay authentication.");
+    return;
+  }
+  try {
+    const challengePayload = await fetchJson("/api/auth/challenges", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ publicKey: appState.wallet.public_key })
+    });
+    const signed = await provider.signMessage(challengePayload.challenge.message, appState.wallet.public_key);
+    if (!signed || signed.cancelled || !signed.signature) throw new Error("Wallet authentication was cancelled.");
+    const session = await fetchJson("/api/auth/sessions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        challengeId: challengePayload.challenge.id,
+        publicKey: appState.wallet.public_key,
+        signature: Array.from(signed.signature)
+      })
+    });
+    appState.authToken = session.token;
+    sessionStorage.setItem("agentpay.authToken", session.token);
+    await refreshProductState();
+  } catch (error) {
+    appState.authToken = null;
+    sessionStorage.removeItem("agentpay.authToken");
+    showToast(`Wallet authentication failed: ${error.message}`);
   }
 }
 
@@ -719,8 +757,8 @@ async function copyPolicy() {
 }
 
 function requireWallet() {
-  if (appState.wallet?.public_key) return true;
-  showToast("Connect an owner wallet first.");
+  if (appState.wallet?.public_key && appState.authToken) return true;
+  showToast(appState.wallet?.public_key ? "Approve the wallet authentication request to continue." : "Connect an owner wallet first.");
   return false;
 }
 
@@ -758,21 +796,26 @@ function showToast(message) {
 }
 
 async function getJson(url) {
-  const response = await fetch(url);
+  return fetchJson(url, { headers: authHeaders() });
+}
+
+async function postJson(url, body) {
+  return fetchJson(url, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body)
+  });
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
   const payload = await response.json();
   if (!response.ok) throw new Error(payload.message || `Request failed (${response.status}).`);
   return payload;
 }
 
-async function postJson(url, body) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.message || `Request failed (${response.status}).`);
-  return payload;
+function authHeaders() {
+  return appState.authToken ? { authorization: `Bearer ${appState.authToken}` } : {};
 }
 
 function formatWCSPR(motes) {

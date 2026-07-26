@@ -26,3 +26,10 @@ test("mandate store updates the same request record through its lifecycle", asyn
   assert.equal((await store.getExecution("request-1")).status, "settlement_pending");
   assert.equal((await store.listExecutions("mandate-1")).length, 1);
 });
+
+test("mandate store consumes each wallet-authentication challenge once", async () => {
+  const store = new MemoryMandateStore();
+  await store.saveAuthChallenge({ id: "auth-1", publicKey: "01owner", expiresAt: "2026-07-27T12:00:00.000Z" });
+  assert.equal((await store.consumeAuthChallenge("auth-1", "01owner", new Date("2026-07-26T12:00:00.000Z"))).id, "auth-1");
+  assert.equal(await store.consumeAuthChallenge("auth-1", "01owner", new Date("2026-07-26T12:00:01.000Z")), null);
+});

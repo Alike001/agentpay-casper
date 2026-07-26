@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +17,7 @@ import {
 } from "../../packages/mandate-engine/index.js";
 import { JsonMandateStore, PostgresMandateStore } from "../../packages/mandate-store/index.js";
 import { activeReservationMotes, authorizeGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
+import { createWalletAuthChallenge, createWalletSession, verifyWalletAuthSignature, verifyWalletSession } from "../../packages/wallet-auth/index.js";
 import { handleOfficialMcpRequest } from "../mcp-server/server.js";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "../..");
@@ -33,6 +35,7 @@ const productStore = process.env.DATABASE_URL
   : new JsonMandateStore(process.env.AGENTPAY_DATA_FILE || join(root, ".data/agentpay.json"));
 let storeInitialization;
 const ensureStore = () => storeInitialization ||= productStore.initialize();
+const authSecret = process.env.AGENTPAY_AUTH_SECRET || randomBytes(32).toString("hex");
 const app = express();
 const x402 = createCasperX402Middleware();
 
@@ -45,6 +48,22 @@ app.get("/healthz", asyncRoute(async (_request, response) => {
 }));
 
 app.get("/api/config", (_request, response) => response.json(publicRuntimeConfig()));
+app.post("/api/auth/challenges", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const challenge = createWalletAuthChallenge(request.body.publicKey);
+  await productStore.saveAuthChallenge(challenge);
+  response.status(201).json({ challenge: publicChallenge(challenge) });
+}));
+app.post("/api/auth/sessions", asyncRoute(async (request, response) => {
+  await ensureStore();
+  const publicKey = String(request.body.publicKey || "").toLowerCase();
+  const challenge = await productStore.getAuthChallenge(String(request.body.challengeId || ""));
+  if (!challenge || challenge.publicKey !== publicKey || challenge.consumedAt) throw httpError(401, "Wallet challenge is invalid or has already been used.");
+  if (!verifyWalletAuthSignature(challenge, request.body.signature)) throw httpError(401, "Wallet signature did not verify for this challenge.");
+  const consumed = await productStore.consumeAuthChallenge(challenge.id, publicKey);
+  if (!consumed) throw httpError(401, "Wallet challenge has expired or was already used.");
+  response.json({ token: createWalletSession(publicKey, authSecret), publicKey, expiresInSeconds: 8 * 60 * 60 });
+}));
 app.get("/runtime-config.js", (_request, response) => {
   const config = JSON.stringify(publicRuntimeConfig()).replace(/</g, "\\u003c");
   response.type("text/javascript").send([
@@ -57,27 +76,37 @@ app.get("/api/state", (_request, response) => response.json(publicState()));
 app.get("/api/rwa-risk-report", handleRwaRiskReport);
 app.get("/api/merchant/services", (_request, response) => response.json(merchantServicesCatalog()));
 
-app.get("/api/mandates", asyncRoute(async (_request, response) => {
+app.get("/api/mandates", asyncRoute(async (request, response) => {
   await ensureStore();
+  const session = requireWalletSession(request);
   const mandates = await productStore.listMandates();
-  response.json({ mandates: await Promise.all(mandates.map(withRuntimeValidation)) });
+  response.json({ mandates: await Promise.all(mandates.filter((item) => item.ownerPublicKey === session.sub).map(withRuntimeValidation)) });
 }));
 
 app.get("/api/mandates/:mandateId", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   response.json(await withRuntimeValidation(mandate));
 }));
 
 app.post("/api/mandates", asyncRoute(async (request, response) => {
   await ensureStore();
+  const session = requireWalletSession(request);
+  if (request.body.ownerPublicKey !== session.sub) throw httpError(403, "Authenticated wallet must own a new mandate.");
   const mandate = createMandateDraft(mandateInputFromRequest(request.body));
-  await productStore.saveMandate(mandate);
+  try {
+    await productStore.createMandate(mandate);
+  } catch (error) {
+    if (error?.code === "DUPLICATE_MANDATE") throw httpError(409, error.message);
+    throw error;
+  }
   response.status(201).json(withValidation(mandate));
 }));
 
 app.post("/api/mandates/compile", asyncRoute(async (request, response) => {
   await ensureStore();
+  const session = requireWalletSession(request);
+  if (request.body.ownerPublicKey !== session.sub) throw httpError(403, "Authenticated wallet must own a new mandate.");
   const result = await compileMandateIntent({
     ...request.body,
     availableServices: merchantServicesCatalog().services.map((service) => ({
@@ -86,7 +115,7 @@ app.post("/api/mandates/compile", asyncRoute(async (request, response) => {
       priceCSPR: service.price
     }))
   });
-  await productStore.saveMandate(result.mandate);
+  await productStore.createMandate(result.mandate);
   response.status(201).json(result);
 }));
 
@@ -99,12 +128,14 @@ app.post("/api/mandates/:mandateId/evaluate", (request, response, next) => {
 
 app.get("/api/mandates/:mandateId/requests", asyncRoute(async (request, response) => {
   await ensureStore();
+  await requireOwnedMandate(request, request.params.mandateId);
   const requests = await productStore.listExecutions(request.params.mandateId);
   response.json({ requests: requests.map(withGatewayTrace) });
 }));
 
 app.get("/api/mandates/:mandateId/requests/:requestId", asyncRoute(async (request, response) => {
   await ensureStore();
+  await requireOwnedMandate(request, request.params.mandateId);
   const gatewayRequest = await productStore.getExecution(request.params.requestId);
   if (!gatewayRequest || gatewayRequest.mandateId !== request.params.mandateId) {
     throw httpError(404, "Gateway request not found.");
@@ -114,13 +145,14 @@ app.get("/api/mandates/:mandateId/requests/:requestId", asyncRoute(async (reques
 
 app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, response) => {
   await ensureStore();
+  await requireOwnedMandate(request, request.params.mandateId);
   const requests = await productStore.listExecutions(request.params.mandateId);
   response.json({ executions: requests.map(toExecutionSummary) });
 }));
 
 async function createGatewayRequestHandler(request, response) {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   const gatewayRequest = await authorizeGatewayRequest(productStore, {
     mandateId: mandate.id,
     source: request.body.source || "rest",
@@ -139,7 +171,7 @@ async function createGatewayRequestHandler(request, response) {
 
 app.post("/api/mandates/:mandateId/activation-submissions", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   if (!request.body.transactionHash) throw httpError(400, "A Casper transaction hash is required.");
   const pending = {
     ...mandate,
@@ -161,7 +193,7 @@ app.post("/api/mandates/:mandateId/activation-submissions", asyncRoute(async (re
 
 app.post("/api/mandates/:mandateId/transactions/activate", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   if (request.body.ownerPublicKey && request.body.ownerPublicKey !== mandate.ownerPublicKey) {
     throw httpError(403, "Connected wallet does not own this mandate draft.");
   }
@@ -170,7 +202,7 @@ app.post("/api/mandates/:mandateId/transactions/activate", asyncRoute(async (req
 
 app.post("/api/mandates/:mandateId/transactions/revoke", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   if (mandate.status !== MandateStatus.ACTIVE) {
     throw httpError(409, "Only a confirmed active mandate can be revoked.");
   }
@@ -182,7 +214,7 @@ app.post("/api/mandates/:mandateId/transactions/revoke", asyncRoute(async (reque
 
 app.post("/api/mandates/:mandateId/wallet-submissions/:operation", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   const operation = String(request.params.operation);
   if (!["activate", "revoke"].includes(operation)) throw httpError(404, "Unknown wallet operation.");
   if (operation === "revoke" && mandate.status !== MandateStatus.ACTIVE) {
@@ -215,7 +247,7 @@ app.post("/api/mandates/:mandateId/wallet-submissions/:operation", asyncRoute(as
 
 app.post("/api/mandates/:mandateId/confirmations/:operation", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   const operation = String(request.params.operation);
   if (!["activate", "revoke"].includes(operation)) throw httpError(404, "Unknown confirmation operation.");
   const submission = operation === "activate" ? mandate.activation : mandate.revocation;
@@ -229,7 +261,7 @@ app.post("/api/mandates/:mandateId/confirmations/:operation", asyncRoute(async (
 
 app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (request, response) => {
   await ensureStore();
-  const mandate = await requireMandate(request.params.mandateId);
+  const mandate = await requireOwnedMandate(request, request.params.mandateId);
   if (mandate.status !== MandateStatus.ACTIVE) {
     throw httpError(409, "Only a confirmed active mandate can be revoked.");
   }
@@ -252,9 +284,11 @@ app.post("/api/mandates/:mandateId/revocation-submissions", asyncRoute(async (re
 
 app.post("/mcp", asyncRoute(async (request, response) => {
   await ensureStore();
+  const session = requireWalletSession(request);
   await handleOfficialMcpRequest(request, response, request.body, {
     store: productStore,
-    services: merchantServicesCatalog().services
+    services: merchantServicesCatalog().services,
+    ownerPublicKey: session.sub
   });
 }));
 app.get("/mcp", (_request, response) => response.status(405).json(mcpMethodNotAllowed()));
@@ -607,6 +641,29 @@ async function requireMandate(id) {
   const mandate = await productStore.getMandate(id);
   if (!mandate) throw httpError(404, `Mandate not found: ${id}`);
   return mandate;
+}
+
+async function requireOwnedMandate(request, id) {
+  const session = requireWalletSession(request);
+  const mandate = await requireMandate(id);
+  if (mandate.ownerPublicKey !== session.sub) throw httpError(403, "Authenticated wallet does not own this mandate.");
+  return mandate;
+}
+
+function requireWalletSession(request) {
+  const token = String(request.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const session = verifyWalletSession(token, authSecret);
+  if (!session) throw httpError(401, "Connect and authenticate an owner wallet to access AgentPay mandates.");
+  return session;
+}
+
+function publicChallenge(challenge) {
+  return {
+    id: challenge.id,
+    publicKey: challenge.publicKey,
+    message: challenge.message,
+    expiresAt: challenge.expiresAt
+  };
 }
 
 function paidRwaRiskReport(paymentResponse) {

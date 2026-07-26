@@ -16,7 +16,7 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 
 ## Product Flow
 
-1. Connect an owner wallet through the Casper Wallet provider; CSPR.click is an optional integration.
+1. Connect and authenticate an owner wallet through the Casper Wallet provider. AgentPay verifies a no-gas Casper Wallet message signature before exposing mandate data or accepting changes.
 2. Describe the purchasing authority for an agent or enter constraints manually.
 3. OpenAI produces a structured **draft only**.
 4. The deterministic mandate engine validates services, limits, budget, approval threshold, expiry, network, and canonical policy hash.
@@ -25,7 +25,7 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 7. The owner can sign an unsigned `MandateGuard::revoke_mandate` transaction to remove authority.
 8. Approved x402 service calls and Casper receipts remain attached to the mandate as evidence.
 
-The backend never receives a wallet private key. An LLM cannot sign, activate a mandate, or override an allow/block decision.
+The backend never receives a wallet private key. An LLM cannot sign, activate a mandate, or override an allow/block decision. A public key in an API request is not treated as ownership proof: protected routes require a short-lived session created from a one-time wallet-signed challenge.
 
 ## Current Final-Round Status
 
@@ -106,7 +106,7 @@ npm run dev
 
 Open http://localhost:4173 and http://localhost:4173/dashboard.
 
-The manual mandate path works without an AI provider. `MandateGuard` is already deployed on Testnet; the direct Casper Wallet provider supports browser-based signing without a CSPR.click application ID. x402 settlement remains disabled until its required Testnet configuration is supplied.
+The manual mandate path works without an AI provider. `MandateGuard` is already deployed on Testnet; the direct Casper Wallet provider supports browser-based signing and message authentication without a CSPR.click application ID. Set `AGENTPAY_AUTH_SECRET` in a durable deployment to retain active sessions across application restarts. x402 settlement remains disabled until its required Testnet configuration is supplied.
 
 ## Configuration
 

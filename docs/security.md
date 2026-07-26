@@ -23,6 +23,7 @@ Trusted:
 - Casper Testnet for public state/receipt proof.
 - Deterministic policy engine for authorization decisions.
 - Smart contracts for policy/receipt commitments.
+- Casper Wallet message signatures for one-time browser authentication challenges.
 
 Partially trusted:
 
@@ -108,6 +109,8 @@ Avoid storing raw prompts, private API responses, secrets, PII, or sensitive bus
 | Fake UI proof | Explorer/CSPR.cloud links |
 | Sensitive data leakage | Hash commitments, no raw prompt/result on-chain |
 | Backend bypass | Contract-level ownership checks for policy changes |
+| Caller claims another wallet public key | One-time Casper Wallet challenge signature plus owner-scoped session |
+| Replayed wallet login response | Persisted challenge is atomically consumed after verification |
 
 ## Hackathon Disclosure
 

@@ -2,7 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import pg from "pg";
 
-const EMPTY_DATA = Object.freeze({ mandates: [], executions: [], approvals: [] });
+const EMPTY_DATA = Object.freeze({ mandates: [], executions: [], approvals: [], authChallenges: [] });
 
 export class JsonMandateStore {
   constructor(path) {
@@ -42,6 +42,14 @@ export class JsonMandateStore {
     });
   }
 
+  async createMandate(mandate) {
+    return this.update((data) => {
+      if (data.mandates.some((item) => item.id === mandate.id)) throw duplicateMandateError();
+      data.mandates.unshift(mandate);
+      return mandate;
+    });
+  }
+
   async listExecutions(mandateId = null) {
     const executions = (await this.read()).executions;
     return mandateId ? executions.filter((item) => item.mandateId === mandateId) : executions;
@@ -68,6 +76,26 @@ export class JsonMandateStore {
     return new Set(executions.map((item) => item.idempotencyKey));
   }
 
+  async saveAuthChallenge(challenge) {
+    return this.update((data) => {
+      data.authChallenges.unshift(challenge);
+      return challenge;
+    });
+  }
+
+  async getAuthChallenge(id) {
+    return (await this.read()).authChallenges.find((challenge) => challenge.id === id) || null;
+  }
+
+  async consumeAuthChallenge(id, publicKey, now = new Date()) {
+    return this.update((data) => {
+      const challenge = data.authChallenges.find((item) => item.id === id);
+      if (!challenge || challenge.publicKey !== publicKey || challenge.consumedAt || new Date(challenge.expiresAt) <= now) return null;
+      challenge.consumedAt = now.toISOString();
+      return structuredClone(challenge);
+    });
+  }
+
   async withMandateLock(mandateId, callback) {
     return this.update(async (data) => applyMandateMutation(data, await callback({
       mandate: structuredClone(data.mandates.find((item) => item.id === mandateId) || null),
@@ -77,12 +105,13 @@ export class JsonMandateStore {
 
   async update(mutator) {
     let result;
-    this.writeQueue = this.writeQueue.then(async () => {
+    const operation = this.writeQueue.then(async () => {
       const data = await this.read();
       result = await mutator(data);
       await this.write(data);
     });
-    await this.writeQueue;
+    this.writeQueue = operation.catch(() => {});
+    await operation;
     return result;
   }
 
@@ -123,6 +152,18 @@ export class MemoryMandateStore {
     return mandate;
   }
 
+  async createMandate(mandate) {
+    let result;
+    const operation = this.mutationQueue.then(() => {
+      if (this.data.mandates.some((item) => item.id === mandate.id)) throw duplicateMandateError();
+      this.data.mandates.unshift(structuredClone(mandate));
+      result = structuredClone(mandate);
+    });
+    this.mutationQueue = operation.catch(() => {});
+    await operation;
+    return result;
+  }
+
   async listExecutions(mandateId = null) {
     const executions = (await this.read()).executions;
     return mandateId ? executions.filter((item) => item.mandateId === mandateId) : executions;
@@ -146,16 +187,39 @@ export class MemoryMandateStore {
     return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
   }
 
+  async saveAuthChallenge(challenge) {
+    this.data.authChallenges.unshift(structuredClone(challenge));
+    return structuredClone(challenge);
+  }
+
+  async getAuthChallenge(id) {
+    return structuredClone(this.data.authChallenges.find((challenge) => challenge.id === id) || null);
+  }
+
+  async consumeAuthChallenge(id, publicKey, now = new Date()) {
+    let result = null;
+    const operation = this.mutationQueue.then(() => {
+      const challenge = this.data.authChallenges.find((item) => item.id === id);
+      if (!challenge || challenge.publicKey !== publicKey || challenge.consumedAt || new Date(challenge.expiresAt) <= now) return;
+      challenge.consumedAt = now.toISOString();
+      result = structuredClone(challenge);
+    });
+    this.mutationQueue = operation.catch(() => {});
+    await operation;
+    return result;
+  }
+
   async withMandateLock(mandateId, callback) {
     let result;
-    this.mutationQueue = this.mutationQueue.then(async () => {
+    const operation = this.mutationQueue.then(async () => {
       result = await callback({
         mandate: structuredClone(this.data.mandates.find((item) => item.id === mandateId) || null),
         executions: structuredClone(this.data.executions.filter((item) => item.mandateId === mandateId))
       });
       applyMandateMutation(this.data, result);
     });
-    await this.mutationQueue;
+    this.mutationQueue = operation.catch(() => {});
+    await operation;
     return result?.value;
   }
 }
@@ -181,6 +245,13 @@ export class PostgresMandateStore {
       );
       CREATE INDEX IF NOT EXISTS agentpay_executions_mandate_id_created_at_idx
         ON agentpay_executions (mandate_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS agentpay_auth_challenges (
+        id TEXT PRIMARY KEY,
+        public_key TEXT NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        consumed_at TIMESTAMPTZ,
+        payload JSONB NOT NULL
+      );
     `);
     return this.read();
   }
@@ -209,6 +280,19 @@ export class PostgresMandateStore {
     return mandate;
   }
 
+  async createMandate(mandate) {
+    try {
+      await this.pool.query(`
+        INSERT INTO agentpay_mandates (id, payload, updated_at)
+        VALUES ($1, $2::jsonb, NOW())
+      `, [mandate.id, JSON.stringify(mandate)]);
+      return mandate;
+    } catch (error) {
+      if (error?.code === "23505") throw duplicateMandateError();
+      throw error;
+    }
+  }
+
   async listExecutions(mandateId = null) {
     const result = mandateId
       ? await this.pool.query("SELECT payload FROM agentpay_executions WHERE mandate_id = $1 ORDER BY created_at DESC", [mandateId])
@@ -232,6 +316,30 @@ export class PostgresMandateStore {
 
   async seenIdempotencyKeys(mandateId) {
     return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
+  }
+
+  async saveAuthChallenge(challenge) {
+    await this.pool.query(`
+      INSERT INTO agentpay_auth_challenges (id, public_key, expires_at, payload)
+      VALUES ($1, $2, $3::timestamptz, $4::jsonb)
+    `, [challenge.id, challenge.publicKey, challenge.expiresAt, JSON.stringify(challenge)]);
+    return challenge;
+  }
+
+  async getAuthChallenge(id) {
+    const result = await this.pool.query("SELECT payload FROM agentpay_auth_challenges WHERE id = $1", [id]);
+    return result.rows[0]?.payload || null;
+  }
+
+  async consumeAuthChallenge(id, publicKey, now = new Date()) {
+    const result = await this.pool.query(`
+      UPDATE agentpay_auth_challenges
+      SET consumed_at = $3::timestamptz,
+          payload = jsonb_set(payload, '{consumedAt}', to_jsonb($3::text), true)
+      WHERE id = $1 AND public_key = $2 AND consumed_at IS NULL AND expires_at > $3::timestamptz
+      RETURNING payload
+    `, [id, publicKey, now.toISOString()]);
+    return result.rows[0]?.payload || null;
   }
 
   async withMandateLock(mandateId, callback) {
@@ -265,7 +373,8 @@ function normalizeData(data) {
   return {
     mandates: Array.isArray(data?.mandates) ? data.mandates : [],
     executions: Array.isArray(data?.executions) ? data.executions : [],
-    approvals: Array.isArray(data?.approvals) ? data.approvals : []
+    approvals: Array.isArray(data?.approvals) ? data.approvals : [],
+    authChallenges: Array.isArray(data?.authChallenges) ? data.authChallenges : []
   };
 }
 
@@ -297,4 +406,10 @@ async function upsertExecution(client, execution) {
     VALUES ($1, $2, $3::jsonb, NOW())
     ON CONFLICT (id) DO UPDATE SET mandate_id = EXCLUDED.mandate_id, payload = EXCLUDED.payload
   `, [execution.id, execution.mandateId, JSON.stringify(execution)]);
+}
+
+function duplicateMandateError() {
+  const error = new Error("A mandate with this identifier already exists.");
+  error.code = "DUPLICATE_MANDATE";
+  return error;
 }

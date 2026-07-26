@@ -4,7 +4,7 @@ import { z } from "zod";
 import { validateMandate } from "../../packages/mandate-engine/index.js";
 import { authorizeGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 
-export function createAgentPayMcpServer({ store, services }) {
+export function createAgentPayMcpServer({ store, services, ownerPublicKey = null }) {
   const server = new McpServer({
     name: "agentpay-casper",
     version: "0.2.0"
@@ -13,7 +13,7 @@ export function createAgentPayMcpServer({ store, services }) {
   server.registerTool("agentpay_list_mandates", {
     description: "List Casper agent spending mandates and their current authority status.",
     inputSchema: {}
-  }, async () => mcpResult({ mandates: await store.listMandates() }));
+  }, async () => mcpResult({ mandates: (await store.listMandates()).filter((mandate) => !ownerPublicKey || mandate.ownerPublicKey === ownerPublicKey) }));
 
   server.registerTool("agentpay_get_mandate", {
     description: "Get one spending mandate, its canonical policy hash, and deterministic validation checks.",
@@ -21,7 +21,7 @@ export function createAgentPayMcpServer({ store, services }) {
       mandateId: z.string().min(1).describe("AgentPay mandate identifier")
     }
   }, async ({ mandateId }) => {
-    const mandate = await requireMandate(store, mandateId);
+    const mandate = await requireMandate(store, mandateId, ownerPublicKey);
     return mcpResult({ mandate, validation: validateMandate(mandate) });
   });
 
@@ -40,7 +40,7 @@ export function createAgentPayMcpServer({ store, services }) {
       approvalId: z.string().min(1).optional()
     }
   }, async ({ mandateId, ...action }) => {
-    const mandate = await requireMandate(store, mandateId);
+    const mandate = await requireMandate(store, mandateId, ownerPublicKey);
     const request = await authorizeGatewayRequest(store, {
       mandateId,
       source: "mcp",
@@ -59,6 +59,7 @@ export function createAgentPayMcpServer({ store, services }) {
       mandateId: z.string().min(1)
     }
   }, async ({ mandateId }) => {
+    await requireMandate(store, mandateId, ownerPublicKey);
     const requests = await store.listExecutions(mandateId);
     return mcpResult({ mandateId, requests: requests.map((request) => ({ request, trace: gatewayTrace(request) })) });
   });
@@ -71,6 +72,7 @@ export function createAgentPayMcpServer({ store, services }) {
   }, async ({ requestId }) => {
     const request = await store.getExecution(requestId);
     if (!request) return mcpError(`Gateway request not found: ${requestId}`);
+    await requireMandate(store, request.mandateId, ownerPublicKey);
     return mcpResult({ request, trace: gatewayTrace(request) });
   });
 
@@ -93,9 +95,10 @@ export async function handleOfficialMcpRequest(request, response, body, dependen
   }
 }
 
-async function requireMandate(store, mandateId) {
+async function requireMandate(store, mandateId, ownerPublicKey = null) {
   const mandate = await store.getMandate(mandateId);
   if (!mandate) throw new Error(`Mandate not found: ${mandateId}`);
+  if (ownerPublicKey && mandate.ownerPublicKey !== ownerPublicKey) throw new Error(`Mandate is not owned by this wallet: ${mandateId}`);
   return mandate;
 }
 
