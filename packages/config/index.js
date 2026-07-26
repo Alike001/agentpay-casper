@@ -19,8 +19,11 @@ export function integrationStatus(env = process.env) {
     "X402_ASSET_NAME"
   ];
 
+  const aiProvider = env.AI_PROVIDER === "openai" || (!env.GROQ_API_KEY && env.OPENAI_API_KEY) ? "openai" : "groq";
+  const aiConfigured = aiProvider === "groq" ? Boolean(env.GROQ_API_KEY) : Boolean(env.OPENAI_API_KEY);
+
   return {
-    openai: capability(Boolean(env.OPENAI_API_KEY), "OpenAI Responses API", env.OPENAI_MODEL || "gpt-5-mini"),
+    openai: capability(aiConfigured, "AI Policy Compiler", aiConfigured ? `${aiProvider === "groq" ? "Groq" : "OpenAI"} · ${aiProvider === "groq" ? env.GROQ_MODEL || "openai/gpt-oss-20b" : env.OPENAI_MODEL || "gpt-5-mini"}` : "Groq or OpenAI API key required"),
     wallet: capability(Boolean(env.CSPR_CLICK_APP_ID), "CSPR.click", env.CSPR_CLICK_APP_ID ? "Casper Testnet" : "App ID required"),
     x402: capability(x402Fields.every((name) => Boolean(env[name])), "Casper x402", "CEP-18 exact settlement"),
     indexing: capability(Boolean(env.CSPR_CLOUD_API_KEY), "CSPR.cloud", env.CSPR_CLOUD_API_KEY ? "REST API" : "API key required"),

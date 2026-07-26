@@ -39,10 +39,11 @@ test("AI compilation remains a draft until deterministic validation and wallet a
     intent: "Allow my procurement agent to buy approved RWA risk reports for one week.",
     ownerPublicKey: OWNER,
     agentAccountHash: AGENT_ACCOUNT
-  }, { client, now: "2026-07-21T12:00:00.000Z" });
+  }, { client, provider: "groq", now: "2026-07-21T12:00:00.000Z" });
 
   assert.equal(result.validation.valid, true);
   assert.equal(result.mandate.status, "draft");
   assert.equal(result.provenance.authority, "draft_only");
+  assert.equal(result.provenance.provider, "groq");
   assert.equal(result.mandate.agentAccountHash, AGENT_ACCOUNT);
 });

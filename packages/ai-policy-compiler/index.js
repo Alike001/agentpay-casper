@@ -31,8 +31,10 @@ const MANDATE_SCHEMA = {
 };
 
 export async function compileMandateIntent(input, options = {}) {
-  if (!process.env.OPENAI_API_KEY && !options.client) {
-    throw new IntegrationUnavailableError("OPENAI_API_KEY is not configured.");
+  const provider = resolveProvider(options, process.env);
+  const apiKey = provider === "groq" ? process.env.GROQ_API_KEY : process.env.OPENAI_API_KEY;
+  if (!apiKey && !options.client) {
+    throw new IntegrationUnavailableError(`${provider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"} is not configured.`);
   }
 
   const intent = String(input.intent || "").trim();
@@ -41,9 +43,12 @@ export async function compileMandateIntent(input, options = {}) {
   }
 
   const now = new Date(options.now || new Date());
-  const client = options.client || new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const client = options.client || new OpenAI({
+    apiKey,
+    ...(provider === "groq" ? { baseURL: "https://api.groq.com/openai/v1" } : {})
+  });
   const response = await client.responses.create({
-    model: options.model || process.env.OPENAI_MODEL || "gpt-5-mini",
+    model: options.model || modelForProvider(provider, process.env),
     store: false,
     instructions: [
       "Compile a human spending intent into a conservative Casper Testnet agent mandate draft.",
@@ -92,13 +97,25 @@ export async function compileMandateIntent(input, options = {}) {
     explanation: compiled.explanation,
     assumptions: compiled.assumptions,
     provenance: {
-      provider: "openai",
-      model: response.model || options.model || process.env.OPENAI_MODEL || "gpt-5-mini",
+      provider,
+      model: response.model || options.model || modelForProvider(provider, process.env),
       responseId: response.id,
       generatedAt: now.toISOString(),
       authority: "draft_only"
     }
   };
+}
+
+function resolveProvider(options, env) {
+  if (options.provider === "groq" || options.provider === "openai") return options.provider;
+  if (env.AI_PROVIDER === "groq" || env.AI_PROVIDER === "openai") return env.AI_PROVIDER;
+  return env.GROQ_API_KEY ? "groq" : "openai";
+}
+
+function modelForProvider(provider, env) {
+  return provider === "groq"
+    ? env.GROQ_MODEL || "openai/gpt-oss-20b"
+    : env.OPENAI_MODEL || "gpt-5-mini";
 }
 
 export function csprToMotes(value) {
