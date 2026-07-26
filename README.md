@@ -8,7 +8,7 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 
 - Product: https://agentsafe-casper.onrender.com/
 - Mandate Workbench: https://agentsafe-casper.onrender.com/dashboard
-- Demo video: https://youtu.be/Q91PSfwQnao
+- Demo video: https://www.youtube.com/watch?v=tiLLEkS7OC4
 - Repository: https://github.com/Alike001/agentpay-casper
 - MandateGuard installation: https://testnet.cspr.live/transaction/751dd46fe662be6adc9fd862821667306e7d662c7db07114e47228d26e51164d
 - Active Testnet mandate: https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab
