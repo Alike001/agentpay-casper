@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import pg from "pg";
 
 const EMPTY_DATA = Object.freeze({ mandates: [], executions: [], approvals: [] });
 
@@ -135,6 +136,85 @@ export class MemoryMandateStore {
 
   async seenIdempotencyKeys(mandateId) {
     return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
+  }
+}
+
+export class PostgresMandateStore {
+  constructor(connectionString) {
+    if (!connectionString) throw new TypeError("A Postgres connection string is required.");
+    this.pool = new pg.Pool({ connectionString, max: 4 });
+  }
+
+  async initialize() {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS agentpay_mandates (
+        id TEXT PRIMARY KEY,
+        payload JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS agentpay_executions (
+        id TEXT PRIMARY KEY,
+        mandate_id TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS agentpay_executions_mandate_id_created_at_idx
+        ON agentpay_executions (mandate_id, created_at DESC);
+    `);
+    return this.read();
+  }
+
+  async read() {
+    const [mandates, executions] = await Promise.all([this.listMandates(), this.listExecutions()]);
+    return { mandates, executions, approvals: [] };
+  }
+
+  async listMandates() {
+    const result = await this.pool.query("SELECT payload FROM agentpay_mandates ORDER BY updated_at DESC");
+    return result.rows.map((row) => row.payload);
+  }
+
+  async getMandate(id) {
+    const result = await this.pool.query("SELECT payload FROM agentpay_mandates WHERE id = $1", [id]);
+    return result.rows[0]?.payload || null;
+  }
+
+  async saveMandate(mandate) {
+    await this.pool.query(`
+      INSERT INTO agentpay_mandates (id, payload, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+    `, [mandate.id, JSON.stringify(mandate)]);
+    return mandate;
+  }
+
+  async listExecutions(mandateId = null) {
+    const result = mandateId
+      ? await this.pool.query("SELECT payload FROM agentpay_executions WHERE mandate_id = $1 ORDER BY created_at DESC", [mandateId])
+      : await this.pool.query("SELECT payload FROM agentpay_executions ORDER BY created_at DESC");
+    return result.rows.map((row) => row.payload);
+  }
+
+  async getExecution(id) {
+    const result = await this.pool.query("SELECT payload FROM agentpay_executions WHERE id = $1", [id]);
+    return result.rows[0]?.payload || null;
+  }
+
+  async saveExecution(execution) {
+    await this.pool.query(`
+      INSERT INTO agentpay_executions (id, mandate_id, payload, created_at)
+      VALUES ($1, $2, $3::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE SET mandate_id = EXCLUDED.mandate_id, payload = EXCLUDED.payload
+    `, [execution.id, execution.mandateId, JSON.stringify(execution)]);
+    return execution;
+  }
+
+  async seenIdempotencyKeys(mandateId) {
+    return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
+  }
+
+  async close() {
+    await this.pool.end();
   }
 }
 

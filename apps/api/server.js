@@ -14,7 +14,7 @@ import {
   MandateStatus,
   validateMandate
 } from "../../packages/mandate-engine/index.js";
-import { JsonMandateStore } from "../../packages/mandate-store/index.js";
+import { JsonMandateStore, PostgresMandateStore } from "../../packages/mandate-store/index.js";
 import { createGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 import { handleOfficialMcpRequest } from "../mcp-server/server.js";
 
@@ -28,7 +28,9 @@ const mandateGuardProof = await loadProof("mandate-guard-testnet-proof.json");
 if (!process.env.RECEIPT_LEDGER_PACKAGE_HASH && testnetProof?.contracts?.receiptLedger?.packageHash) {
   process.env.RECEIPT_LEDGER_PACKAGE_HASH = testnetProof.contracts.receiptLedger.packageHash;
 }
-const productStore = new JsonMandateStore(process.env.AGENTPAY_DATA_FILE || join(root, ".data/agentpay.json"));
+const productStore = process.env.DATABASE_URL
+  ? new PostgresMandateStore(process.env.DATABASE_URL)
+  : new JsonMandateStore(process.env.AGENTPAY_DATA_FILE || join(root, ".data/agentpay.json"));
 let storeInitialization;
 const ensureStore = () => storeInitialization ||= productStore.initialize();
 const app = express();
@@ -39,7 +41,7 @@ app.use(express.json({ limit: "32kb" }));
 
 app.get("/healthz", asyncRoute(async (_request, response) => {
   await ensureStore();
-  response.json({ ok: true, service: "agentpay-casper", version: "0.2.0" });
+  response.json({ ok: true, service: "agentpay-casper", version: "0.2.0", storage: process.env.DATABASE_URL ? "postgres" : "local-json" });
 }));
 
 app.get("/api/config", (_request, response) => response.json(publicRuntimeConfig()));

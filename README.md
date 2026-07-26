@@ -116,6 +116,7 @@ Minimum integration variables:
 
 ```text
 OPENAI_API_KEY
+CSPR_NODE_URL
 CSPR_CLICK_APP_ID
 MANDATE_GUARD_PACKAGE_HASH
 X402_FACILITATOR_URL
@@ -123,7 +124,12 @@ X402_PAYEE_ADDRESS
 X402_ASSET_PACKAGE
 X402_ASSET_NAME
 CSPR_CLOUD_API_KEY
+DATABASE_URL
 ```
+
+### Durable Render storage
+
+Render web-service files are ephemeral. Set `DATABASE_URL` to the **Internal Database URL** of a Render Postgres instance before using the deployed workbench. AgentPay then stores mandates and gateway request records in Postgres; without it, the JSON store is intended only for local development and is erased when Render restarts or redeploys.
 
 ## API Surface
 
