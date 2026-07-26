@@ -37,7 +37,7 @@
             <p>AgentPay is the Casper authorization gateway for paid MCP tools. A wallet owner grants a revocable mandate; deterministic policy decides each agent request before payment or settlement.</p>
             <div class="intro-actions">
               <a class="button primary" href="/dashboard"><span>Open mandate gateway</span><i data-lucide="arrow-right"></i></a>
-              <a class="button secondary" href="https://testnet.cspr.live/transaction/0e4f7640feb51092abfb91d869d0f9719e397f17802ec73ea9bf3fb17ddb5295" target="_blank" rel="noreferrer"><span>View Testnet proof</span><i data-lucide="external-link"></i></a>
+              <a class="button secondary" href="https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab" target="_blank" rel="noreferrer"><span>View Testnet proof</span><i data-lucide="external-link"></i></a>
             </div>
           </div>
           <p class="intro-footnote"><i data-lucide="shield-check"></i>Wallet-owned authority · Testnet-only · No agent-held private keys</p>
@@ -52,12 +52,12 @@
           <div class="authority-chain">
             <div class="chain-node owner-node" data-flow-node>
               <span class="node-icon"><i data-lucide="wallet"></i></span>
-              <div><small>OWNER</small><strong>Casper wallet</strong><code>0203415c...0e6d88c9</code></div>
+              <div><small>OWNER</small><strong>Casper wallet</strong><code>0183338d...efbca6</code></div>
             </div>
             <div class="chain-link"><span>delegates</span><i data-lucide="arrow-right"></i></div>
             <div class="chain-node mandate-node" data-flow-node>
               <span class="node-icon"><i data-lucide="scroll-text"></i></span>
-              <div><small>ON-CHAIN AUTHORITY</small><strong>MandateGuard</strong><code>policy f69d71...eb14960</code></div>
+              <div><small>ON-CHAIN AUTHORITY</small><strong>MandateGuard</strong><code>policy c5749c...114abb</code></div>
             </div>
             <div class="chain-link"><span>bounds</span><i data-lucide="arrow-right"></i></div>
             <div class="chain-node agent-node" data-flow-node>
@@ -67,9 +67,9 @@
           </div>
 
           <div class="mandate-constraints">
-            <div><span>Per action</span><strong>10 WCSPR</strong></div>
+            <div><span>Per action</span><strong>25 CSPR</strong></div>
             <div><span>Daily budget</span><strong>50 CSPR</strong><small>0 consumed</small></div>
-            <div><span>Approval above</span><strong>10 WCSPR</strong></div>
+            <div><span>Approval</span><strong>Owner required</strong></div>
             <div><span>Authority</span><strong>Active on Testnet</strong></div>
           </div>
 
@@ -77,7 +77,7 @@
             <div class="service-branch approved" data-flow-node>
               <span class="branch-line"></span>
               <span class="node-icon"><i data-lucide="file-check-2"></i></span>
-              <div><small>APPROVED SERVICE</small><strong>RWA Risk Report API</strong><code>svc-rwa-risk · exact CEP-18</code></div>
+              <div><small>APPROVED SERVICE</small><strong>RWA Risk Report API</strong><code>rwa-risk-report · x402 configuration pending</code></div>
               <span class="verdict"><i data-lucide="check"></i>ALLOWED</span>
             </div>
             <div class="service-branch blocked" data-flow-node>
@@ -91,8 +91,8 @@
         </div>
         <div class="evidence-strip" aria-label="Verified protocol evidence" data-reveal>
           <div><span>Authority</span><strong>Odra MandateGuard</strong><code>hash-eb5d33...1db222</code></div>
-          <div><span>Testnet transaction</span><strong>Confirmed create_mandate</strong><code>0e4f7640...7ddb5295</code></div>
-          <div><span>Decision engine</span><strong>Deterministic reason codes</strong><code>ALLOWED · AMOUNT_OVER_LIMIT</code></div>
+          <div><span>Testnet transaction</span><strong>Confirmed create_mandate</strong><code>afe0c811...030dbdab</code></div>
+          <div><span>Decision engine</span><strong>Deterministic policy enforcement</strong><code>allowlist · limits · expiry · idempotency</code></div>
           <div><span>Owner control</span><strong>Wallet approval and revocation</strong><code>Casper Wallet message auth</code></div>
         </div>
       </section>
@@ -111,9 +111,9 @@
         <div class="section-heading"><span>ONE MANDATE, COMPLETE PROOF</span><h2>Every decision stays attached to the authority that produced it.</h2></div>
         <div class="proof-workspace">
           <div class="execution-timeline">
-            <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="arrow-down-to-line"></i></span><div><small>REQUEST</small><strong>RWA Risk Report API returns payment requirement</strong><code>HTTP 402 · 10 WCSPR · svc-rwa-risk</code></div></div>
-            <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="shield-check"></i></span><div><small>POLICY</small><strong>Mandate permits the service and amount</strong><code>ALLOWED · budget remaining 40 WCSPR</code></div></div>
-            <div class="timeline-row pending"><span class="timeline-marker"><i data-lucide="wallet-cards"></i></span><div><small>SETTLEMENT</small><strong>Wallet-bound x402 exact payment</strong><code>Casper Testnet · CEP-18 · configuration pending</code></div></div>
+            <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="arrow-down-to-line"></i></span><div><small>REQUEST</small><strong>RWA data service is defined in the mandate</strong><code>rwa-risk-report · service allowlist</code></div></div>
+            <div class="timeline-row complete"><span class="timeline-marker"><i data-lucide="shield-check"></i></span><div><small>POLICY</small><strong>MandateGuard bounds the agent before an action</strong><code>limit · daily budget · owner approval · expiry</code></div></div>
+            <div class="timeline-row pending"><span class="timeline-marker"><i data-lucide="wallet-cards"></i></span><div><small>SETTLEMENT</small><strong>x402 exact settlement is not configured</strong><code>No facilitator, payee, or CEP-18 asset is configured</code></div></div>
             <div class="timeline-row live"><span class="timeline-marker"><i data-lucide="scroll-text"></i></span><div><small>ON-CHAIN AUTHORITY</small><strong>MandateGuard mandate created on Casper Testnet</strong><a href="https://testnet.cspr.live/transaction/afe0c811796d1e2b4e779279ab762266b44c630eae7a21261787d0dc030dbdab" target="_blank" rel="noreferrer">afe0c811...030dbdab <i data-lucide="external-link"></i></a></div></div>
           </div>
           <aside class="proof-inspector">
