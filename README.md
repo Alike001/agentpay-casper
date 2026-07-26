@@ -16,7 +16,7 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 
 ## Product Flow
 
-1. Connect an owner wallet through CSPR.click.
+1. Connect an owner wallet through the Casper Wallet provider; CSPR.click is an optional integration.
 2. Describe the purchasing authority for an agent or enter constraints manually.
 3. OpenAI produces a structured **draft only**.
 4. The deterministic mandate engine validates services, limits, budget, approval threshold, expiry, network, and canonical policy hash.
@@ -34,7 +34,7 @@ The backend never receives a wallet private key. An LLM cannot sign, activate a 
 | Spending mandates | Persistent draft, validation, policy hash, limits, expiry, evaluation, and reason codes | Working |
 | AI policy compilation | OpenAI Responses API with strict structured output; deterministic revalidation | Working; provider credits required |
 | MCP | Official MCP SDK and stateless Streamable HTTP transport at `POST /mcp` | Working |
-| Wallet signing | CSPR.click v2 client integration and unsigned Casper transaction builder | Code ready; production app ID required |
+| Wallet signing | Direct Casper Wallet provider plus optional CSPR.click integration and unsigned Casper transaction builder | Working with Casper Wallet; CSPR.click production app ID remains optional |
 | Odra authority | `MandateGuard` contract with owner, delegate, limits, service, expiry, revocation, and consumption checks | Deployed on Testnet; a bounded mandate is active |
 | Casper x402 | Official `@make-software/casper-x402` exact CEP-18 middleware | Code ready; facilitator and WCSPR configuration required |
 | CSPR.cloud | Runtime capability reporting and planned confirmation adapter | API key/integration pending |
@@ -106,7 +106,7 @@ npm run dev
 
 Open http://localhost:4173 and http://localhost:4173/dashboard.
 
-The manual mandate path works without an AI provider. `MandateGuard` is already deployed on Testnet; CSPR.click wallet registration is still required for browser-based signing, and x402 settlement remains disabled until its required Testnet configuration is supplied.
+The manual mandate path works without an AI provider. `MandateGuard` is already deployed on Testnet; the direct Casper Wallet provider supports browser-based signing without a CSPR.click application ID. x402 settlement remains disabled until its required Testnet configuration is supplied.
 
 ## Configuration
 
