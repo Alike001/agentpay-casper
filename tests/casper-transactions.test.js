@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import casperSdk from "casper-js-sdk";
 import { buildCreateMandateTransaction, buildRevokeMandateTransaction, classifyCasperTransactionResult, normalizeWalletSignature, submitCasperWalletSignature } from "../packages/casper-transactions/index.js";
 import { createMandateDraft } from "../packages/mandate-engine/index.js";
 
@@ -56,10 +57,24 @@ test("normalizes a Casper Wallet serialized signature with its matching algorith
   const tagged = [2, ...Array.from({ length: 64 }, (_value, index) => index + 1)];
   const normalized = normalizeWalletSignature(tagged, "02" + "a".repeat(64));
 
-  assert.equal(normalized[0], 0x30);
-  assert.equal(normalized[1], 68);
-  assert.deepEqual([...normalized.slice(2, 36)], [0x02, 32, ...tagged.slice(1, 33)]);
-  assert.deepEqual([...normalizeWalletSignature(tagged.slice(1), "02" + "a".repeat(64))], [...normalized]);
+  assert.deepEqual([...normalized], tagged);
+  assert.deepEqual([...normalizeWalletSignature(tagged.slice(1), "02" + "a".repeat(64))], tagged);
+});
+
+test("attaches a compact secp256k1 wallet signature in the format casper-js-sdk validates", () => {
+  const { KeyAlgorithm, PrivateKey, Transaction } = casperSdk;
+  const owner = PrivateKey.generate(KeyAlgorithm.SECP256K1);
+  const mandate = createMandateDraft({
+    ownerPublicKey: owner.publicKey.toHex(),
+    agentAccountHash: "account-hash-3975323bebe4fc7eed16f29262ff7756fb745a00aa3a08f5c36a945bf924b2cb"
+  });
+  const built = buildCreateMandateTransaction(mandate, { packageHash: "a".repeat(64) });
+  const unsigned = Transaction.fromJSON(built.transaction);
+  const compactSignature = owner.sign(unsigned.getTransactionV1().hash.toBytes());
+  const signed = Transaction.fromJSON(built.transaction);
+
+  signed.setSignature(normalizeWalletSignature(Array.from(compactSignature), owner.publicKey.toHex()), owner.publicKey);
+  assert.equal(signed.validate(), true);
 });
 
 test("classifies a successful Casper V2 execution as confirmed", () => {

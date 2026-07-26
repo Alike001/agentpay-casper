@@ -146,29 +146,12 @@ function toSignatureBytes(value) {
 }
 
 export function normalizeWalletSignature(value, signingPublicKey) {
-  let bytes = toSignatureBytes(value);
+  const bytes = toSignatureBytes(value);
   const algorithmTag = Number.parseInt(String(signingPublicKey).slice(0, 2), 16);
-  // Casper Wallet returns a serialized Signature in some extension versions:
-  // algorithm tag plus the raw 64-byte signature expected by Transaction.setSignature.
-  if (bytes.length === 65 && bytes[0] === algorithmTag) bytes = bytes.slice(1);
-  // Casper Wallet returns compact r || s secp256k1 signatures. casper-js-sdk
-  // validates secp256k1 approvals through DER, while Ed25519 remains raw bytes.
-  if (algorithmTag === 2 && bytes.length === 64) return compactSecp256k1ToDer(bytes);
+  // casper-js-sdk expects Casper's serialized secp256k1 signature: algorithm
+  // tag plus compact r || s bytes. Casper Wallet already returns this form.
+  if (algorithmTag === 2 && bytes.length === 64) return Uint8Array.from([algorithmTag, ...bytes]);
   return bytes;
-}
-
-function compactSecp256k1ToDer(signature) {
-  const r = derInteger(signature.slice(0, 32));
-  const s = derInteger(signature.slice(32));
-  return Uint8Array.from([0x30, r.length + s.length, ...r, ...s]);
-}
-
-function derInteger(bytes) {
-  let first = 0;
-  while (first < bytes.length - 1 && bytes[first] === 0) first += 1;
-  const value = bytes.slice(first);
-  const encoded = value[0] & 0x80 ? [0, ...value] : [...value];
-  return [0x02, encoded.length, ...encoded];
 }
 
 function isTransactionMissing(error) {
