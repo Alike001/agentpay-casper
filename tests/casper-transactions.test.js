@@ -83,7 +83,7 @@ test("classifies a successful Casper V2 execution as confirmed", () => {
       block_hash: "block-hash",
       execution_result: { Version2: { error_message: null } }
     }
-  }, "a".repeat(64), "https://rpc.testnet.casper.network/rpc");
+  }, "a".repeat(64), "https://node.testnet.casper.network/rpc");
 
   assert.equal(confirmation.status, "confirmed");
   assert.equal(confirmation.blockHash, "block-hash");

@@ -84,7 +84,7 @@ export async function submitCasperWalletSignature(transactionJson, signingPublic
   transaction.setSignature(normalizeWalletSignature(signature, signingPublicKey), PublicKey.fromHex(signingPublicKey));
   if (!transaction.validate()) throw new TypeError("Casper Wallet signature did not validate against the stored transaction.");
 
-  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://rpc.testnet.casper.network/rpc");
+  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://node.testnet.casper.network/rpc");
   const client = new RpcClient(new HttpHandler(nodeUrl));
   const submitted = await client.putTransaction(transaction);
   if (!submitted?.transactionHash) throw new Error("Casper node did not return a transaction hash.");
@@ -95,7 +95,7 @@ export async function inspectCasperTransaction(transactionHash, options = {}) {
   const hash = String(transactionHash || "").replace(/^(transaction-|deploy-)/, "");
   if (!/^[a-f0-9]{64}$/i.test(hash)) throw new TypeError("A 64-character Casper transaction hash is required.");
 
-  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://rpc.testnet.casper.network/rpc");
+  const nodeUrl = String(options.nodeUrl || process.env.CASPER_NODE_URL || "https://node.testnet.casper.network/rpc");
   const client = new RpcClient(new HttpHandler(nodeUrl));
   try {
     const result = await client.getTransactionByTransactionHash(hash);

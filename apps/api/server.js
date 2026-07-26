@@ -48,7 +48,7 @@ app.get("/runtime-config.js", (_request, response) => {
   response.type("text/javascript").send([
     `window.AGENTPAY_CONFIG = ${config};`,
     "const clickUIOptions = { uiContainer: 'csprclick-ui', rootAppElement: '#app', showTopBar: false, defaultTheme: 'light' };",
-    "const clickSDKOptions = { appName: 'AgentPay Casper', appId: window.AGENTPAY_CONFIG.csprClickAppId || 'csprclick-template', chainName: 'casper-test', casperNode: 'https://rpc.testnet.casper.network/rpc', providers: ['casper-wallet', 'ledger', 'metamask-snap'] };"
+    "const clickSDKOptions = { appName: 'AgentPay Casper', appId: window.AGENTPAY_CONFIG.csprClickAppId || 'csprclick-template', chainName: 'casper-test', casperNode: 'https://node.testnet.casper.network/rpc', providers: ['casper-wallet', 'ledger', 'metamask-snap'] };"
   ].join("\n"));
 });
 app.get("/api/state", (_request, response) => response.json(publicState()));
