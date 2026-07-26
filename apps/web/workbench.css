@@ -259,7 +259,7 @@ fieldset legend { padding: 0 4px; }
 .toast { position: fixed; z-index: 90; right: 18px; bottom: 18px; max-width: 380px; border: 1px solid var(--border-strong); border-radius: 6px; background: var(--ink); color: var(--white); box-shadow: var(--shadow); padding: 11px 14px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity 160ms ease, transform 160ms ease; font-size: 12px; }
 .toast.show { opacity: 1; transform: translateY(0); }
 
-@media (max-width: 1180px) {
+@media (max-width: 1440px) {
   .app-header { grid-template-columns: 56px 1fr auto; }
   .app-brand { width: 56px; padding: 0 14px; }
   .app-brand > span:last-child { display: none; }
@@ -268,6 +268,8 @@ fieldset legend { padding: 0 4px; }
   .rail-link, .rail-footer a { justify-content: center; padding: 0; }
   .rail-link span, .rail-footer span { display: none; }
   .context-inspector { display: none; }
+  .disconnect-command { width: 36px; padding: 0; }
+  .disconnect-command span { display: none; }
   .authority-grid { grid-template-columns: 1fr 1fr 1fr; }
   .authority-grid > div:nth-child(3) { border-right: 0; }
   .authority-grid > div:nth-child(n+4) { border-top: 1px solid var(--border); }
