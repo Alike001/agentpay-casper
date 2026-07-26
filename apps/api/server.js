@@ -115,7 +115,7 @@ app.get("/api/mandates/:mandateId/requests/:requestId", asyncRoute(async (reques
 app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, response) => {
   await ensureStore();
   const requests = await productStore.listExecutions(request.params.mandateId);
-  response.json({ executions: requests.map(withGatewayTrace) });
+  response.json({ executions: requests.map(toExecutionSummary) });
 }));
 
 async function createGatewayRequestHandler(request, response) {
@@ -522,6 +522,21 @@ function withValidation(mandate) {
 
 function withGatewayTrace(gatewayRequest) {
   return { request: gatewayRequest, trace: gatewayTrace(gatewayRequest) };
+}
+
+// Keep the original dashboard endpoint concise while /requests exposes the full lifecycle record.
+function toExecutionSummary(gatewayRequest) {
+  const decision = gatewayRequest.decision || {};
+  return {
+    id: gatewayRequest.id,
+    verdict: decision.verdict || "block",
+    serviceId: gatewayRequest.serviceId,
+    amountMotes: gatewayRequest.amountMotes,
+    reasonCode: decision.reasonCode || "DECISION_UNAVAILABLE",
+    message: decision.message || "A deterministic mandate decision was not recorded.",
+    createdAt: gatewayRequest.createdAt,
+    requestStatus: gatewayRequest.status
+  };
 }
 
 async function rememberPendingWalletTransaction(mandate, operation) {

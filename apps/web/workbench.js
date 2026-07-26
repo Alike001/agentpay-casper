@@ -688,13 +688,15 @@ async function evaluateAction(event) {
       })
     });
     const payload = await response.json();
-    if (!payload.decision) throw new Error(payload.message || "Policy evaluation failed.");
+    if (!response.ok || !payload.request?.decision) {
+      throw new Error(payload.message || "Policy evaluation failed.");
+    }
     appState.executions = (await getJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/executions`)).executions || [];
     renderExecutions();
     renderLatestExecution();
     closeActionDialog();
     selectTab("executions");
-    showToast(`${payload.decision.reasonCode}: ${payload.decision.message}`);
+    showToast(`${payload.request.decision.reasonCode}: ${payload.request.decision.message}`);
     window.lucide?.createIcons();
   } catch (error) {
     showToast(error.message);
