@@ -21,7 +21,7 @@ AgentPay lets a wallet owner define which paid services an AI agent may use, its
 3. OpenAI produces a structured **draft only**.
 4. The deterministic mandate engine validates services, limits, budget, approval threshold, expiry, network, and canonical policy hash.
 5. The owner reviews and signs an unsigned `MandateGuard::create_mandate` transaction client-side.
-6. Agent actions are evaluated against the active mandate before signing or settlement.
+6. An allowed agent action atomically reserves mandate capacity for two minutes before signing or settlement; it is not represented as settled spending.
 7. The owner can sign an unsigned `MandateGuard::revoke_mandate` transaction to remove authority.
 8. Approved x402 service calls and Casper receipts remain attached to the mandate as evidence.
 
@@ -40,7 +40,7 @@ The backend never receives a wallet private key. An LLM cannot sign, activate a 
 | CSPR.cloud | Runtime capability reporting and planned confirmation adapter | API key/integration pending |
 | Testnet evidence | Deployed Odra `MandateGuard`, a real `create_mandate` call, and historical ReceiptLedger write | Live |
 
-The interface reports unconfigured integrations honestly. It does not present a draft as active or a submitted transaction as confirmed.
+The interface reports unconfigured integrations honestly. It does not present a draft as active, a submitted transaction as confirmed, or an authorization reservation as a settled payment.
 
 ## Casper Testnet Proof
 

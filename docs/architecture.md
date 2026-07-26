@@ -116,7 +116,6 @@ Inputs:
 - action type
 - amount
 - idempotency key
-- optional approval id
 
 Checks:
 
@@ -126,8 +125,8 @@ Checks:
 - service is allowlisted
 - idempotency key is unused
 - amount is under per-request cap
-- daily budget is available
-- approval exists when threshold is exceeded
+- daily budget is available after counting unexpired authorization reservations
+- threshold-exceeding actions stop at `needs_approval`; an arbitrary caller-provided approval ID is never accepted as proof
 
 Outputs:
 

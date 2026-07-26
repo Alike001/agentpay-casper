@@ -237,7 +237,9 @@ function renderMandateList() {
     return;
   }
   elements.mandateList.innerHTML = mandates.map(({ mandate }) => {
-    const remaining = BigInt(mandate.dailyBudgetMotes) - BigInt(mandate.spentTodayMotes);
+    const reserved = BigInt(mandate.reservedTodayMotes || 0);
+    const available = BigInt(mandate.dailyBudgetMotes) - BigInt(mandate.spentTodayMotes) - reserved;
+    const remaining = available > 0n ? available : 0n;
     return `
       <button class="mandate-row ${mandate.id === appState.selectedId ? "selected" : ""}" data-mandate-id="${escapeAttribute(mandate.id)}" type="button">
         <span class="mandate-row-head"><strong>${escapeHtml(mandate.name)}</strong><span class="status-mini ${escapeAttribute(mandate.status)}">${escapeHtml(mandate.status)}</span></span>
@@ -295,11 +297,15 @@ function renderSelectedMandate() {
   $("#policy-json").textContent = JSON.stringify(canonicalPolicy || mandate, null, 2);
 
   const spent = BigInt(mandate.spentTodayMotes);
+  const reserved = BigInt(mandate.reservedTodayMotes || 0);
   const budget = BigInt(mandate.dailyBudgetMotes);
-  const remaining = budget > spent ? budget - spent : 0n;
-  const progress = budget ? Number((spent * 10000n) / budget) / 100 : 0;
+  const committed = spent + reserved;
+  const remaining = budget > committed ? budget - committed : 0n;
+  const progress = budget ? Number((committed * 10000n) / budget) / 100 : 0;
   $("#budget-remaining").textContent = `${formatWCSPR(remaining)} remaining`;
-  $("#budget-spent").textContent = `${formatWCSPR(spent)} spent`;
+  $("#budget-spent").textContent = reserved > 0n
+    ? `${formatWCSPR(spent)} spent · ${formatWCSPR(reserved)} reserved`
+    : `${formatWCSPR(spent)} spent`;
   $("#budget-total").textContent = `${formatWCSPR(budget)} total`;
   $("#budget-progress").style.width = `${Math.min(progress, 100)}%`;
 
@@ -692,6 +698,10 @@ async function evaluateAction(event) {
       throw new Error(payload.message || "Policy evaluation failed.");
     }
     appState.executions = (await getJson(`/api/mandates/${encodeURIComponent(record.mandate.id)}/executions`)).executions || [];
+    const mandateData = await getJson("/api/mandates");
+    appState.mandates = mandateData.mandates || [];
+    renderMandateList();
+    renderSelectedMandate();
     renderExecutions();
     renderLatestExecution();
     closeActionDialog();

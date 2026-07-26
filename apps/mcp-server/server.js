@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { validateMandate } from "../../packages/mandate-engine/index.js";
-import { createGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
+import { authorizeGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 
 export function createAgentPayMcpServer({ store, services }) {
   const server = new McpServer({
@@ -31,7 +31,7 @@ export function createAgentPayMcpServer({ store, services }) {
   }, async () => mcpResult({ services }));
 
   server.registerTool("agentpay_authorize_paid_tool", {
-    description: "Create a durable AgentPay authorization request for a paid MCP tool. This never signs, settles, delivers a service response, or changes budget.",
+    description: "Create a durable AgentPay authorization request for a paid MCP tool. An allowed request reserves mandate capacity but never signs, settles, or delivers a service response.",
     inputSchema: {
       mandateId: z.string().min(1),
       serviceId: z.string().min(1),
@@ -41,18 +41,15 @@ export function createAgentPayMcpServer({ store, services }) {
     }
   }, async ({ mandateId, ...action }) => {
     const mandate = await requireMandate(store, mandateId);
-    const seenIdempotencyKeys = await store.seenIdempotencyKeys(mandateId);
-    const request = createGatewayRequest({
-      mandate,
+    const request = await authorizeGatewayRequest(store, {
+      mandateId,
       source: "mcp",
-      seenIdempotencyKeys,
       action: {
-      ...action,
-      agentId: mandate.agentId,
-      actionType: "paid_service_call"
+        ...action,
+        agentId: mandate.agentId,
+        actionType: "paid_service_call"
       }
     });
-    await store.saveExecution(request);
     return mcpResult({ mandateId, request, trace: gatewayTrace(request) });
   });
 

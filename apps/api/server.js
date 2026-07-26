@@ -15,7 +15,7 @@ import {
   validateMandate
 } from "../../packages/mandate-engine/index.js";
 import { JsonMandateStore, PostgresMandateStore } from "../../packages/mandate-store/index.js";
-import { createGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
+import { activeReservationMotes, authorizeGatewayRequest, gatewayTrace } from "../../packages/gateway/index.js";
 import { handleOfficialMcpRequest } from "../mcp-server/server.js";
 
 const root = join(fileURLToPath(new URL(".", import.meta.url)), "../..");
@@ -60,13 +60,13 @@ app.get("/api/merchant/services", (_request, response) => response.json(merchant
 app.get("/api/mandates", asyncRoute(async (_request, response) => {
   await ensureStore();
   const mandates = await productStore.listMandates();
-  response.json({ mandates: mandates.map(withValidation) });
+  response.json({ mandates: await Promise.all(mandates.map(withRuntimeValidation)) });
 }));
 
 app.get("/api/mandates/:mandateId", asyncRoute(async (request, response) => {
   await ensureStore();
   const mandate = await requireMandate(request.params.mandateId);
-  response.json(withValidation(mandate));
+  response.json(await withRuntimeValidation(mandate));
 }));
 
 app.post("/api/mandates", asyncRoute(async (request, response) => {
@@ -121,11 +121,9 @@ app.get("/api/mandates/:mandateId/executions", asyncRoute(async (request, respon
 async function createGatewayRequestHandler(request, response) {
   await ensureStore();
   const mandate = await requireMandate(request.params.mandateId);
-  const seenIdempotencyKeys = await productStore.seenIdempotencyKeys(mandate.id);
-  const gatewayRequest = createGatewayRequest({
-    mandate,
+  const gatewayRequest = await authorizeGatewayRequest(productStore, {
+    mandateId: mandate.id,
     source: request.body.source || "rest",
-    seenIdempotencyKeys,
     action: {
       agentId: mandate.agentId,
       serviceId: request.body.serviceId,
@@ -135,7 +133,7 @@ async function createGatewayRequestHandler(request, response) {
       approvalId: request.body.approvalId
     }
   });
-  await productStore.saveExecution(gatewayRequest);
+  if (!gatewayRequest) throw httpError(404, "Mandate not found.");
   response.status(201).json(withGatewayTrace(gatewayRequest));
 }
 
@@ -518,6 +516,11 @@ function mandateInputFromRequest(body = {}) {
 
 function withValidation(mandate) {
   return { mandate, canonicalPolicy: canonicalPolicy(mandate), validation: validateMandate(mandate) };
+}
+
+async function withRuntimeValidation(mandate) {
+  const reservations = activeReservationMotes(await productStore.listExecutions(mandate.id));
+  return withValidation({ ...mandate, reservedTodayMotes: reservations.toString() });
 }
 
 function withGatewayTrace(gatewayRequest) {

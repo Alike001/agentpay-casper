@@ -57,11 +57,12 @@ The policy engine checks:
 
 - agent is active
 - policy is active
+- policy start time has passed
 - policy is not expired
 - service is allowed
-- amount is within limit
-- cumulative run/day budget is available
-- approval exists if required
+- amount is positive and within limit
+- cumulative run/day budget includes unexpired authorization reservations
+- a caller-provided approval ID never authorizes a threshold-exceeding request; verified owner approvals remain a required follow-up flow
 - idempotency key has not been used
 
 ## Reason Codes
@@ -72,11 +73,13 @@ All decisions must include a reason code:
 - `AGENT_REVOKED`
 - `POLICY_EXPIRED`
 - `POLICY_DISABLED`
+- `MANDATE_NOT_YET_VALID`
 - `SERVICE_NOT_ALLOWED`
 - `AMOUNT_OVER_LIMIT`
 - `BUDGET_EXCEEDED`
 - `APPROVAL_REQUIRED`
 - `DUPLICATE_ACTION`
+- `INVALID_AMOUNT`
 - `INVALID_SERVICE`
 
 ## On-Chain Receipts
@@ -115,4 +118,3 @@ README must state:
 - Not suitable for custody or mainnet funds.
 - AI outputs are untrusted.
 - x402 adapter, if present, is experimental.
-

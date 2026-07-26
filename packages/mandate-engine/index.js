@@ -16,13 +16,15 @@ export const MandateReasonCode = Object.freeze({
   ALLOWED: "ALLOWED",
   MANDATE_INVALID: "MANDATE_INVALID",
   MANDATE_DISABLED: "MANDATE_DISABLED",
+  MANDATE_NOT_YET_VALID: "MANDATE_NOT_YET_VALID",
   MANDATE_EXPIRED: "MANDATE_EXPIRED",
   MANDATE_NOT_ACTIVE: "MANDATE_NOT_ACTIVE",
   SERVICE_NOT_ALLOWED: "SERVICE_NOT_ALLOWED",
   AMOUNT_OVER_LIMIT: "AMOUNT_OVER_LIMIT",
   BUDGET_EXCEEDED: "BUDGET_EXCEEDED",
   APPROVAL_REQUIRED: "APPROVAL_REQUIRED",
-  DUPLICATE_ACTION: "DUPLICATE_ACTION"
+  DUPLICATE_ACTION: "DUPLICATE_ACTION",
+  INVALID_AMOUNT: "INVALID_AMOUNT"
 });
 
 export function createMandateDraft(input = {}, options = {}) {
@@ -120,6 +122,9 @@ export function evaluateMandate(mandate, actionInput, context = {}) {
   if (mandate.status !== MandateStatus.ACTIVE) {
     return mandateDecision("block", MandateReasonCode.MANDATE_NOT_ACTIVE, "Mandate has not been activated by its owner wallet.", action);
   }
+  if (asDate(mandate.validFrom) > now) {
+    return mandateDecision("block", MandateReasonCode.MANDATE_NOT_YET_VALID, "Mandate authority has not started yet.", action);
+  }
   if (asDate(mandate.expiresAt) <= now) {
     return mandateDecision("block", MandateReasonCode.MANDATE_EXPIRED, "Mandate has expired.", action);
   }
@@ -129,14 +134,18 @@ export function evaluateMandate(mandate, actionInput, context = {}) {
   if (!action.idempotencyKey || seenKeys.has(action.idempotencyKey)) {
     return mandateDecision("block", MandateReasonCode.DUPLICATE_ACTION, "Action key is missing or has already been consumed.", action);
   }
+  if (toBigInt(action.amountMotes) <= 0n) {
+    return mandateDecision("block", MandateReasonCode.INVALID_AMOUNT, "Action amount must be greater than zero.", action);
+  }
   if (toBigInt(action.amountMotes) > toBigInt(mandate.maxAmountPerActionMotes)) {
     return mandateDecision("block", MandateReasonCode.AMOUNT_OVER_LIMIT, "Action exceeds the mandate's per-request limit.", action);
   }
-  if (toBigInt(mandate.spentTodayMotes) + toBigInt(action.amountMotes) > toBigInt(mandate.dailyBudgetMotes)) {
+  const reservedTodayMotes = toBigInt(context.reservedTodayMotes ?? 0);
+  if (toBigInt(mandate.spentTodayMotes) + reservedTodayMotes + toBigInt(action.amountMotes) > toBigInt(mandate.dailyBudgetMotes)) {
     return mandateDecision("block", MandateReasonCode.BUDGET_EXCEEDED, "Action would exceed the mandate's daily budget.", action);
   }
-  if (toBigInt(action.amountMotes) > toBigInt(mandate.approvalThresholdMotes) && !action.approvalId) {
-    return mandateDecision("needs_approval", MandateReasonCode.APPROVAL_REQUIRED, "Action requires an additional wallet approval.", action);
+  if (toBigInt(action.amountMotes) > toBigInt(mandate.approvalThresholdMotes)) {
+    return mandateDecision("needs_approval", MandateReasonCode.APPROVAL_REQUIRED, "Action requires a verified owner approval. Caller-provided approval IDs are not trusted.", action);
   }
   return mandateDecision("allow", MandateReasonCode.ALLOWED, "Action is inside the active mandate.", action);
 }

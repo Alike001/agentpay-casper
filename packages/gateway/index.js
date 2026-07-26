@@ -14,6 +14,8 @@ export const GatewayRequestStatus = Object.freeze({
   FAILED: "failed"
 });
 
+export const RESERVATION_TTL_MS = 2 * 60 * 1000;
+
 const TERMINAL_STATUSES = new Set([
   GatewayRequestStatus.BLOCKED,
   GatewayRequestStatus.APPROVAL_REQUIRED,
@@ -28,9 +30,9 @@ const ALLOWED_TRANSITIONS = new Map([
   [GatewayRequestStatus.DELIVERED, new Set([GatewayRequestStatus.PROVEN, GatewayRequestStatus.FAILED])]
 ]);
 
-export function createGatewayRequest({ mandate, action, source = "rest", seenIdempotencyKeys, now = new Date(), id = randomUUID() }) {
+export function createGatewayRequest({ mandate, action, source = "rest", seenIdempotencyKeys, reservedTodayMotes = 0, now = new Date(), id = randomUUID() }) {
   const createdAt = asIso(now);
-  const decision = evaluateMandate(mandate, action, { now, seenIdempotencyKeys });
+  const decision = evaluateMandate(mandate, action, { now, seenIdempotencyKeys, reservedTodayMotes });
   const request = {
     id: `request-${id}`,
     type: "paid_mcp_action",
@@ -46,6 +48,7 @@ export function createGatewayRequest({ mandate, action, source = "rest", seenIde
     settlement: null,
     delivery: null,
     proof: null,
+    reservation: null,
     createdAt,
     updatedAt: createdAt,
     events: [event(GatewayRequestStatus.PROPOSED, "AgentPay received a structured paid-tool action.", createdAt)]
@@ -54,7 +57,14 @@ export function createGatewayRequest({ mandate, action, source = "rest", seenIde
   transitionGatewayRequest(request, GatewayRequestStatus.VALIDATED, "Mandate and action were normalized for deterministic evaluation.", createdAt);
 
   if (decision.verdict === "allow") {
-    transitionGatewayRequest(request, GatewayRequestStatus.AUTHORIZED, decision.message, createdAt, { decision });
+    transitionGatewayRequest(request, GatewayRequestStatus.AUTHORIZED, decision.message, createdAt, {
+      decision,
+      reservation: {
+        amountMotes: decision.action.amountMotes,
+        status: "reserved",
+        expiresAt: new Date(new Date(createdAt).getTime() + RESERVATION_TTL_MS).toISOString()
+      }
+    });
   } else if (decision.verdict === "needs_approval") {
     transitionGatewayRequest(request, GatewayRequestStatus.APPROVAL_REQUIRED, decision.message, createdAt, { decision });
   } else {
@@ -62,6 +72,33 @@ export function createGatewayRequest({ mandate, action, source = "rest", seenIde
   }
 
   return request;
+}
+
+export function activeReservationMotes(requests, now = new Date()) {
+  const timestamp = new Date(now).getTime();
+  if (Number.isNaN(timestamp)) throw new TypeError("Reservation timestamp must be a valid date.");
+  return requests.reduce((total, request) => {
+    const reservation = request?.reservation;
+    const stillReserved = reservation?.status === "reserved"
+      && [GatewayRequestStatus.AUTHORIZED, GatewayRequestStatus.SETTLEMENT_PENDING].includes(request.status)
+      && new Date(reservation.expiresAt).getTime() > timestamp;
+    return stillReserved ? total + BigInt(reservation.amountMotes) : total;
+  }, 0n);
+}
+
+export async function authorizeGatewayRequest(store, { mandateId, action, source = "rest", now = new Date() }) {
+  return store.withMandateLock(mandateId, ({ mandate, executions }) => {
+    if (!mandate) return { value: null };
+    const request = createGatewayRequest({
+      mandate,
+      action,
+      source,
+      now,
+      seenIdempotencyKeys: new Set(executions.map((item) => item.idempotencyKey)),
+      reservedTodayMotes: activeReservationMotes(executions, now)
+    });
+    return { execution: request, value: request };
+  });
 }
 
 export function transitionGatewayRequest(request, nextStatus, message, at = new Date(), patch = {}) {

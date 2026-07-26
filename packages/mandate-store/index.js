@@ -68,6 +68,13 @@ export class JsonMandateStore {
     return new Set(executions.map((item) => item.idempotencyKey));
   }
 
+  async withMandateLock(mandateId, callback) {
+    return this.update(async (data) => applyMandateMutation(data, await callback({
+      mandate: structuredClone(data.mandates.find((item) => item.id === mandateId) || null),
+      executions: structuredClone(data.executions.filter((item) => item.mandateId === mandateId))
+    })));
+  }
+
   async update(mutator) {
     let result;
     this.writeQueue = this.writeQueue.then(async () => {
@@ -90,6 +97,7 @@ export class JsonMandateStore {
 export class MemoryMandateStore {
   constructor(seed = EMPTY_DATA) {
     this.data = structuredClone(normalizeData(seed));
+    this.mutationQueue = Promise.resolve();
   }
 
   async initialize() {
@@ -136,6 +144,19 @@ export class MemoryMandateStore {
 
   async seenIdempotencyKeys(mandateId) {
     return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
+  }
+
+  async withMandateLock(mandateId, callback) {
+    let result;
+    this.mutationQueue = this.mutationQueue.then(async () => {
+      result = await callback({
+        mandate: structuredClone(this.data.mandates.find((item) => item.id === mandateId) || null),
+        executions: structuredClone(this.data.executions.filter((item) => item.mandateId === mandateId))
+      });
+      applyMandateMutation(this.data, result);
+    });
+    await this.mutationQueue;
+    return result?.value;
   }
 }
 
@@ -213,6 +234,28 @@ export class PostgresMandateStore {
     return new Set((await this.listExecutions(mandateId)).map((item) => item.idempotencyKey));
   }
 
+  async withMandateLock(mandateId, callback) {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const mandateResult = await client.query("SELECT payload FROM agentpay_mandates WHERE id = $1 FOR UPDATE", [mandateId]);
+      const executionResult = await client.query("SELECT payload FROM agentpay_executions WHERE mandate_id = $1 FOR UPDATE", [mandateId]);
+      const result = await callback({
+        mandate: mandateResult.rows[0]?.payload || null,
+        executions: executionResult.rows.map((row) => row.payload)
+      });
+      if (result?.mandate) await upsertMandate(client, result.mandate);
+      if (result?.execution) await upsertExecution(client, result.execution);
+      await client.query("COMMIT");
+      return result?.value;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async close() {
     await this.pool.end();
   }
@@ -224,4 +267,34 @@ function normalizeData(data) {
     executions: Array.isArray(data?.executions) ? data.executions : [],
     approvals: Array.isArray(data?.approvals) ? data.approvals : []
   };
+}
+
+function applyMandateMutation(data, result) {
+  if (result?.mandate) {
+    const mandateIndex = data.mandates.findIndex((item) => item.id === result.mandate.id);
+    if (mandateIndex === -1) data.mandates.unshift(structuredClone(result.mandate));
+    else data.mandates[mandateIndex] = structuredClone(result.mandate);
+  }
+  if (result?.execution) {
+    const executionIndex = data.executions.findIndex((item) => item.id === result.execution.id);
+    if (executionIndex === -1) data.executions.unshift(structuredClone(result.execution));
+    else data.executions[executionIndex] = structuredClone(result.execution);
+  }
+  return result?.value;
+}
+
+async function upsertMandate(client, mandate) {
+  await client.query(`
+    INSERT INTO agentpay_mandates (id, payload, updated_at)
+    VALUES ($1, $2::jsonb, NOW())
+    ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()
+  `, [mandate.id, JSON.stringify(mandate)]);
+}
+
+async function upsertExecution(client, execution) {
+  await client.query(`
+    INSERT INTO agentpay_executions (id, mandate_id, payload, created_at)
+    VALUES ($1, $2, $3::jsonb, NOW())
+    ON CONFLICT (id) DO UPDATE SET mandate_id = EXCLUDED.mandate_id, payload = EXCLUDED.payload
+  `, [execution.id, execution.mandateId, JSON.stringify(execution)]);
 }

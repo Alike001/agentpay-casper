@@ -56,11 +56,22 @@ test("blocks service, amount, budget, duplicate, and revoked violations determin
   assert.equal(evaluateMandate({ ...mandate, status: MandateStatus.REVOKED }, paidAction(), { now: NOW }).reasonCode, MandateReasonCode.MANDATE_DISABLED);
 });
 
-test("requires explicit approval above the configured threshold", () => {
+test("requires a verified approval flow above the configured threshold and ignores caller approval IDs", () => {
   const mandate = activeMandate();
   const action = paidAction({ amountMotes: 22n * CSPR_MOTES });
   assert.equal(evaluateMandate(mandate, action, { now: NOW }).reasonCode, MandateReasonCode.APPROVAL_REQUIRED);
-  assert.equal(evaluateMandate(mandate, { ...action, approvalId: "wallet-approval-1" }, { now: NOW }).reasonCode, MandateReasonCode.ALLOWED);
+  assert.equal(evaluateMandate(mandate, { ...action, approvalId: "wallet-approval-1" }, { now: NOW }).reasonCode, MandateReasonCode.APPROVAL_REQUIRED);
+});
+
+test("blocks actions before validFrom and zero-value actions", () => {
+  const futureMandate = createMandateDraft({
+    ...activeMandate(),
+    validFrom: "2026-07-22T12:00:00.000Z",
+    expiresAt: "2026-07-28T12:00:00.000Z"
+  }, { now: NOW });
+  const activeFutureMandate = activateMandate(futureMandate, OWNER, { now: NOW });
+  assert.equal(evaluateMandate(activeFutureMandate, paidAction({ idempotencyKey: "future" }), { now: NOW }).reasonCode, MandateReasonCode.MANDATE_NOT_YET_VALID);
+  assert.equal(evaluateMandate(activeMandate(), paidAction({ amountMotes: 0, idempotencyKey: "zero" }), { now: NOW }).reasonCode, MandateReasonCode.INVALID_AMOUNT);
 });
 
 function activeMandate() {
