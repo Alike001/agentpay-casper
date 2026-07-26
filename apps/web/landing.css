@@ -47,7 +47,7 @@ svg { width: 16px; height: 16px; stroke-width: 1.75; }
 
 .product-intro { max-width: 1180px; display: grid; grid-template-columns: minmax(0, .86fr) minmax(470px, 1.14fr); gap: 34px 44px; margin: 0 auto; padding: 64px 24px 44px; }
 .intro-copy { align-self: center; min-width: 0; }
-.network-label, .section-heading > span, .security-statement span, .closing span { color: var(--red); font-size: 11px; font-weight: 800; letter-spacing: 0; }
+.network-label, .section-heading > span, .security-statement span, .closing > div > span { color: var(--red); font-size: 11px; font-weight: 800; letter-spacing: 0; }
 .network-label { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 14px; }
 .network-label svg { width: 13px; height: 13px; }
 h1, h2, h3, p { letter-spacing: 0; }

@@ -49,6 +49,9 @@ code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", ui-monos
 .header-context { min-width: 0; display: flex; align-items: center; gap: 18px; padding: 0 18px; }
 .network-state, .quiet-state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .network-state span { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+.account-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.disconnect-command { color: var(--muted); }
+.disconnect-command:hover { border-color: #efb6b1; background: #fff5f4; color: var(--blocked); }
 
 .command, .icon-command, .text-command, .rail-link {
   border: 0;
@@ -279,6 +282,8 @@ fieldset legend { padding: 0 4px; }
   .network-state { justify-self: center; }
   #wallet-button { width: 36px; padding: 0; }
   #wallet-button span { display: none; }
+  .disconnect-command { width: 36px; padding: 0; }
+  .disconnect-command span { display: none; }
   .workbench-shell { height: auto; min-height: calc(100vh - 56px); display: block; padding-bottom: 58px; }
   .primary-rail { position: fixed; z-index: 30; right: 0; bottom: 0; left: 0; height: 56px; display: block; border: 0; border-top: 1px solid var(--border); padding: 4px 6px; }
   .primary-rail nav { height: 100%; grid-template-columns: repeat(5, 1fr); }

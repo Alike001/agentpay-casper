@@ -25,11 +25,13 @@
           <span class="network-state"><span></span>Casper Testnet</span>
           <span id="sync-state" class="quiet-state">Workbench ready</span>
         </div>
-        <button id="wallet-button" class="command secondary" type="button">
-          <i data-lucide="wallet"></i>
-          <span>Connect wallet</span>
-        </button>
-        <button id="disconnect-wallet" class="icon-command" type="button" title="Disconnect wallet from AgentPay" aria-label="Disconnect wallet from AgentPay" hidden><i data-lucide="unlink"></i></button>
+        <div class="account-actions">
+          <button id="wallet-button" class="command secondary" type="button">
+            <i data-lucide="wallet"></i>
+            <span>Connect wallet</span>
+          </button>
+          <button id="disconnect-wallet" class="command secondary disconnect-command" type="button" title="Disconnect wallet from AgentPay" hidden><i data-lucide="unlink"></i><span>Disconnect</span></button>
+        </div>
       </header>
 
       <div class="workbench-shell">
