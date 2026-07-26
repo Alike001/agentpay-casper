@@ -169,8 +169,7 @@ h2 { margin: 7px 0 0; font-size: 32px; line-height: 1.12; font-weight: 760; }
 
 @media (max-width: 640px) {
   .site-header { height: 56px; padding: 0 12px; }
-  .header-action { width: 38px; min-height: 36px; padding: 0; }
-  .header-action span { display: none; }
+  .header-action { min-height: 36px; padding: 0 12px; }
   .product-intro { padding: 28px 16px 32px; }
   h1 { font-size: 32px; }
   h2 { font-size: 24px; }
