@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@make-software/casper-x402": "^1.0.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@x402/core": "^2.19.0",
     "@x402/express": "^2.19.0",
     "express": "^5.1.0",
