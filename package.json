@@ -24,7 +24,7 @@
   "dependencies": {
     "@make-software/casper-x402": "^1.0.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@x402/core": "^2.19.0",
+    "@x402/core": "^2.20.0",
     "@x402/express": "^2.19.0",
     "express": "^5.1.0",
     "openai": "^6.48.0",
